@@ -43,17 +43,14 @@ public class MainActivity extends Activity {
         container = findViewById(R.id.container);
         webView = findViewById(R.id.webview);
 
+        // Without wide viewport the page's CSS width equals the WebView's width
+        // in dp, which is what applyScales() relies on.
         webView.getSettings().setJavaScriptEnabled(true);
         webView.getSettings().setDomStorageEnabled(true);
-        webView.getSettings().setUseWideViewPort(true);
-        webView.getSettings().setLoadWithOverviewMode(true);
+        webView.getSettings().setUseWideViewPort(false);
+        webView.getSettings().setLoadWithOverviewMode(false);
 
-        webView.setWebViewClient(new WebViewClient() {
-            @Override
-            public void onPageFinished(WebView view, String url) {
-                applyViewport();
-            }
-        });
+        webView.setWebViewClient(new WebViewClient());
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onShowCustomView(View view, CustomViewCallback callback) {
@@ -66,9 +63,9 @@ public class MainActivity extends Activity {
                 container.addView(fullscreenView, new FrameLayout.LayoutParams(
                         ViewGroup.LayoutParams.MATCH_PARENT,
                         ViewGroup.LayoutParams.MATCH_PARENT,
-                        Gravity.CENTER));
-                // INVISIBLE (not GONE) keeps the WebView's size, so the page
-                // doesn't see a resize and renegotiate a lower resolution.
+                        Gravity.TOP | Gravity.START));
+                applyScales();
+                // INVISIBLE (not GONE) keeps the WebView's size so the page doesn't resize.
                 webView.setVisibility(View.INVISIBLE);
             }
 
@@ -80,26 +77,43 @@ public class MainActivity extends Activity {
                 fullscreenCallback.onCustomViewHidden();
                 fullscreenCallback = null;
                 webView.setVisibility(View.VISIBLE);
-                applyViewport();
             }
         });
+
+        container.addOnLayoutChangeListener(
+                (v, l, t, r, b, ol, ot, or, ob) -> applyScales());
 
         webView.loadUrl(TARGET_URL);
     }
 
-    // Reports physical pixels divided by `scale` as the page width, so Pi Connect
-    // negotiates a resolution matching the screen while text stays `scale`x larger.
-    private void applyViewport() {
-        String js = String.format(Locale.US,
-                "(function() {" +
-                "  var s = %f;" +
-                "  var dpr = window.devicePixelRatio || 1;" +
-                "  var meta = document.querySelector('meta[name=viewport]');" +
-                "  if (!meta) { meta = document.createElement('meta'); meta.name = 'viewport'; document.head.appendChild(meta); }" +
-                "  meta.content = 'width=' + Math.round(screen.width * dpr / s) + ', initial-scale=' + (s / dpr);" +
-                "})();",
-                scale);
-        webView.evaluateJavascript(js, null);
+    // Lays the view out at (dpr / scale) times the screen size, then shrinks it back
+    // with a view transform. The page sees a CSS viewport of physicalWidth / scale,
+    // so Pi Connect negotiates a matching resolution and text is `scale`x larger.
+    private void applyScale(View v) {
+        int cw = container.getWidth();
+        int ch = container.getHeight();
+        if (cw == 0 || ch == 0) return;
+
+        float k = getResources().getDisplayMetrics().density / scale;
+        int w = Math.round(cw * k);
+        int h = Math.round(ch * k);
+
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) v.getLayoutParams();
+        if (lp.width != w || lp.height != h) {
+            lp.width = w;
+            lp.height = h;
+            lp.gravity = Gravity.TOP | Gravity.START;
+            v.setLayoutParams(lp);
+        }
+        v.setPivotX(0);
+        v.setPivotY(0);
+        v.setScaleX(1f / k);
+        v.setScaleY(1f / k);
+    }
+
+    private void applyScales() {
+        applyScale(webView);
+        if (fullscreenView != null) applyScale(fullscreenView);
     }
 
     private void changeScale(float delta) {
@@ -107,7 +121,7 @@ public class MainActivity extends Activity {
         if (newScale == scale) return;
         scale = newScale;
         prefs.edit().putFloat(PREF_SCALE, scale).apply();
-        applyViewport();
+        applyScales();
         Toast.makeText(this, String.format(Locale.US, "Scale %.2fx", scale), Toast.LENGTH_SHORT).show();
     }
 
