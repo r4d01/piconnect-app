@@ -41,50 +41,65 @@ public class MainActivity extends Activity {
     private static final int REMOTE_MOD_SCANCODE = 56; // Linux KEY_LEFTALT
     private static final int REMOTE_MOD_META = KeyEvent.META_ALT_ON | KeyEvent.META_ALT_LEFT_ON;
 
-    // Injected after each page load. While a remote session is open (Pi Connect's
-    // full screen button is present) it:
-    // - asks the app to tap "Enter full screen" as soon as the button appears, since
-    //   requestFullscreen() only works inside a real user gesture and a JS click()
-    //   isn't one. Once per session: if the user leaves fullscreen it stays left,
-    //   and it re-arms when the button disappears (e.g. after disconnecting);
+    // Injected after each page load. While a remote session is open (a Pi Connect
+    // full screen control is present) it:
+    // - asks the app to tap "Enter full screen" once the control is visible and
+    //   enabled, since requestFullscreen() only works inside a real user gesture and
+    //   a JS click() isn't one. Retries a few times if fullscreen doesn't start
+    //   (e.g. the session was still connecting). Once fullscreen has started, it
+    //   stays out of the way if the user leaves; it re-arms when the control
+    //   disappears (e.g. after disconnecting);
     // - keeps the page scrolled to the origin, because Pi Connect focuses a hidden
     //   input for keyboard capture and the WebView scrolls it into view.
+    // Controls are found by visible label, aria-label or title, not by tag.
     private static final String PAGE_JS =
             "(function() {" +
             "  if (window.__piConnectApp) return;" +
             "  window.__piConnectApp = true;" +
-            "  function findButton(re) {" +
-            "    return Array.prototype.find.call(document.querySelectorAll('button')," +
-            "        function(b) { return re.test(b.textContent); });" +
+            "  function controls(re) {" +
+            "    var found = [];" +
+            "    if (!document.body) return found;" +
+            "    var w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT), n;" +
+            "    while ((n = w.nextNode())) {" +
+            "      if (re.test(n.nodeValue))" +
+            "        found.push(n.parentElement.closest('button, a, [role=button]') || n.parentElement);" +
+            "    }" +
+            "    Array.prototype.forEach.call(document.querySelectorAll('[aria-label], [title]'), function(el) {" +
+            "      if (re.test(el.getAttribute('aria-label') || el.getAttribute('title') || '')) found.push(el);" +
+            "    });" +
+            "    return found;" +
             "  }" +
-            "  var done = false, pending = false;" +
-            "  function schedule() {" +
-            "    if (!pending) { pending = true; setTimeout(check, 300); }" +
+            "  function usable(el) {" +
+            "    if (el.disabled || el.getAttribute('aria-disabled') === 'true') return null;" +
+            "    var r = el.getBoundingClientRect();" +
+            "    return r.width && r.height ? r : null;" +
+            "  }" +
+            "  var entered = false, attempts = 0, pending = false;" +
+            "  document.addEventListener('fullscreenchange', function() {" +
+            "    if (document.fullscreenElement) entered = true;" +
+            "  });" +
+            "  function schedule(delay) {" +
+            "    if (!pending) { pending = true; setTimeout(check, delay || 300); }" +
             "  }" +
             "  function check() {" +
             "    pending = false;" +
             "    if (document.fullscreenElement) return;" +
-            "    if (!findButton(/full ?screen/i)) { done = false; return; }" +
-            "    var btn = findButton(/enter full ?screen/i);" +
-            "    if (done || !btn) return;" +
-            "    var r = btn.getBoundingClientRect();" +
-            "    if (!r.width || !r.height) { schedule(); return; }" +
-            "    done = true;" +
+            "    if (!controls(/full ?screen/i).length) { entered = false; attempts = 0; return; }" +
+            "    var candidates = controls(/enter full ?screen/i);" +
+            "    if (entered || attempts >= 5 || !candidates.length) return;" +
+            "    var r = null;" +
+            "    for (var i = 0; i < candidates.length && !r; i++) r = usable(candidates[i]);" +
+            "    if (!r) { schedule(500); return; }" +
+            "    attempts++;" +
             "    PiConnectApp.tap(r.left + r.width / 2, r.top + r.height / 2);" +
+            "    schedule(1500);" +
             "  }" +
-            // TEMPORARY diagnostic: shows what modifier key events the page receives.
-            "  ['keydown', 'keyup'].forEach(function(t) {" +
-            "    document.addEventListener(t, function(e) {" +
-            "      if (e.key !== 'Alt' && !e.altKey) return;" +
-            "      PiConnectApp.debug('page ' + e.type + ' key=' + e.key + ' code=' + e.code +" +
-            "          ' alt=' + e.altKey + ' trusted=' + e.isTrusted);" +
-            "    }, true);" +
-            "  });" +
-            "  new MutationObserver(schedule).observe(document.documentElement," +
-            "      {childList: true, subtree: true, characterData: true});" +
+            "  new MutationObserver(function() { schedule(); }).observe(document.documentElement," +
+            "      {childList: true, subtree: true, characterData: true," +
+            "       attributes: true, attributeFilter: ['disabled', 'aria-disabled', 'hidden']});" +
             "  schedule();" +
             "  window.addEventListener('scroll', function() {" +
-            "    if ((window.scrollX || window.scrollY) && findButton(/full ?screen/i)) window.scrollTo(0, 0);" +
+            "    if ((window.scrollX || window.scrollY) && controls(/full ?screen/i).length) window.scrollTo(0, 0);" +
             "  });" +
             "})();";
 
@@ -151,12 +166,6 @@ public class MainActivity extends Activity {
             @JavascriptInterface
             public void tap(float cssX, float cssY) {
                 runOnUiThread(() -> tapWebView(cssX, cssY));
-            }
-
-            // TEMPORARY diagnostic.
-            @JavascriptInterface
-            public void debug(String message) {
-                runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show());
             }
         }, "PiConnectApp");
 
