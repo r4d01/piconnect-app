@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon.png" width="96" alt="PiConnect app icon"></p>
 
-# <img src="https://cdn.simpleicons.org/raspberrypi" height="28" alt="Raspberry Pi"> Pi Connect App <img src="https://cdn.simpleicons.org/android" height="28" alt="Android">
+# <img src="https://cdn.simpleicons.org/raspberrypi" height="28" alt="Raspberry Pi"> Pi Connect App <img src="https://cdn.simpleicons.org/android" height="38" alt="Android">
 
 **Your Raspberry Pi lab, from anywhere.**
 
