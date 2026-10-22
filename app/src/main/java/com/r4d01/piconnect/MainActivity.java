@@ -219,14 +219,22 @@ public class MainActivity extends Activity {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             container.setOnApplyWindowInsetsListener((v, insets) -> {
+                boolean ime = insets.isVisible(WindowInsets.Type.ime());
+                boolean physicalKeyboard = KeyboardWebView.hasPhysicalKeyboard();
+                // A shown IME (even just its physical-keyboard toolbar) brings the
+                // tablet taskbar back. With a real keyboard attached it isn't needed.
+                if (ime && physicalKeyboard) {
+                    WindowInsetsController controller = getWindow().getInsetsController();
+                    if (controller != null) controller.hide(WindowInsets.Type.ime());
+                }
                 // Swipe-revealed transient bars don't count as visible here, so this
                 // only fires when something has brought the bars back for good.
                 if (insets.isVisible(WindowInsets.Type.navigationBars())) {
                     // TEMPORARY diagnostic: why do the bars come back in the remote shell?
                     Configuration c = getResources().getConfiguration();
                     Toast.makeText(this, String.format(Locale.US,
-                            "Bars shown: ime=%b keyboard=%d hardKeyboardHidden=%d",
-                            insets.isVisible(WindowInsets.Type.ime()), c.keyboard, c.hardKeyboardHidden),
+                            "Bars shown: ime=%b physicalKeyboard=%b keyboard=%d hardKeyboardHidden=%d",
+                            ime, physicalKeyboard, c.keyboard, c.hardKeyboardHidden),
                             Toast.LENGTH_LONG).show();
                     v.post(this::hideSystemBars);
                 }
