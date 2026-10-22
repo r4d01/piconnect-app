@@ -65,6 +65,14 @@ public class MainActivity extends Activity {
             "    done = true;" +
             "    PiConnectApp.tap(r.left + r.width / 2, r.top + r.height / 2);" +
             "  }" +
+            // TEMPORARY diagnostic: shows what modifier key events the page receives.
+            "  ['keydown', 'keyup'].forEach(function(t) {" +
+            "    document.addEventListener(t, function(e) {" +
+            "      if (e.key !== 'Meta' && e.key !== 'Control' && !e.metaKey) return;" +
+            "      PiConnectApp.debug('page ' + e.type + ' key=' + e.key + ' code=' + e.code +" +
+            "          ' meta=' + e.metaKey + ' trusted=' + e.isTrusted);" +
+            "    }, true);" +
+            "  });" +
             "  new MutationObserver(schedule).observe(document.documentElement," +
             "      {childList: true, subtree: true, characterData: true});" +
             "  schedule();" +
@@ -136,6 +144,12 @@ public class MainActivity extends Activity {
             @JavascriptInterface
             public void tap(float cssX, float cssY) {
                 runOnUiThread(() -> tapWebView(cssX, cssY));
+            }
+
+            // TEMPORARY diagnostic.
+            @JavascriptInterface
+            public void debug(String message) {
+                runOnUiThread(() -> Toast.makeText(MainActivity.this, message, Toast.LENGTH_LONG).show());
             }
         }, "PiConnectApp");
 
