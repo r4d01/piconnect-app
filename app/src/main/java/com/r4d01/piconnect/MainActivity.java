@@ -136,14 +136,12 @@ public class MainActivity extends Activity {
                 webView.goBack();
                 return true;
             }
-        } else if (fullscreenView == null) {
-            if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-                changeScale(SCALE_STEP);
-                return true;
-            } else if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
-                changeScale(-SCALE_STEP);
-                return true;
-            }
+        } else if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
+            changeScale(SCALE_STEP);
+            return true;
+        } else if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            changeScale(-SCALE_STEP);
+            return true;
         }
         return super.onKeyDown(keyCode, event);
     }
