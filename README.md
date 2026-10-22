@@ -59,6 +59,7 @@ Requires Android 5.0 or newer. Hiding the system bars and the on-screen keyboard
 
 - **A tablet with a BT keyboard and mouse.** A phone works too, and so does touch, but a remote desktop is much nicer with real input devices.
 - **Turn off the on-screen keyboard for physical keyboards** in Android's settings, usually under **Settings → System → Keyboard → Physical keyboard → Use on-screen keyboard**. The app hides it anyway, but with this off, the taskbar doesn't even flash when you click into a text field.
+- **Check Android's physical keyboard layout** under **Settings → System → Keyboard → Physical keyboard**. With a keyboard attached, the app types characters using that layout. If you have more than one (say US and Czech), switch between them with **Ctrl+Space**. Wrong quotes or symbols usually mean the wrong layout is active.
 - **Nothing extra on the Pi.** Raspberry Pi OS already switches windows with Alt+Tab.
 
 ### 🔄 Upgrading
@@ -77,6 +78,7 @@ Your Raspberry Pi ID gives access to every Pi you've connected to it, and you si
 - 🔀 **Real Alt+Tab and the Super key go to Android**, not to the Pi. Use Right Ctrl + Tab instead. Super can't be passed through.
 - 🎛️ **Right Ctrl isn't a Ctrl key** in this app, because it stands in for Alt. Left Ctrl works normally.
 - 🚪 **No sign-out button**, because Raspberry Pi Connect's menus are hidden. To sign out, clear the app's data: **Settings → Apps → PiConnect → Storage → Clear data**.
+- ✍️ **Dead keys may not combine** while a physical keyboard is attached, for example `ˇ` then `c` for `č`. Letters that are directly on a key work fine.
 - 🧩 **It depends on Raspberry Pi Connect's web pages.** If Raspberry Pi Connect changes its "Enter full screen" button or its device list layout, automatic fullscreen or the trimmed device list may stop working until the app is updated.
 - 🔇 **No sound.** Raspberry Pi Connect's screen sharing doesn't transfer audio.
 

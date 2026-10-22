@@ -224,7 +224,7 @@ public class MainActivity extends Activity {
             container.setOnApplyWindowInsetsListener((v, insets) -> {
                 // A shown IME (even just its physical-keyboard toolbar) brings the
                 // tablet taskbar back. With a real keyboard attached it isn't needed.
-                if (insets.isVisible(WindowInsets.Type.ime()) && hasPhysicalKeyboard()) {
+                if (insets.isVisible(WindowInsets.Type.ime()) && KeyboardWebView.hasPhysicalKeyboard()) {
                     WindowInsetsController controller = getWindow().getInsetsController();
                     if (controller != null) controller.hide(WindowInsets.Type.ime());
                 }
@@ -268,20 +268,6 @@ public class MainActivity extends Activity {
                     // Nowhere to open it: just stay on the current page.
                 }
             });
-        }
-        return false;
-    }
-
-    // Detachable tablet keyboards often don't set Configuration.keyboard /
-    // hardKeyboardHidden, so look at the connected input devices instead.
-    private static boolean hasPhysicalKeyboard() {
-        for (int id : InputDevice.getDeviceIds()) {
-            InputDevice device = InputDevice.getDevice(id);
-            if (device != null && !device.isVirtual()
-                    && device.getKeyboardType() == InputDevice.KEYBOARD_TYPE_ALPHABETIC
-                    && (device.getSources() & InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD) {
-                return true;
-            }
         }
         return false;
     }
