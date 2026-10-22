@@ -2,6 +2,7 @@ package com.r4d01.piconnect;
 
 import android.app.Activity;
 import android.content.SharedPreferences;
+import android.os.Build;
 import android.os.Bundle;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -24,6 +25,28 @@ public class MainActivity extends Activity {
     private static final float MIN_SCALE = 0.5f;
     private static final float MAX_SCALE = 3.0f;
     private static final float SCALE_STEP = 0.25f;
+
+    // Clicks Pi Connect's "Enter full screen" button on the first tap or key press of a
+    // remote session, since requestFullscreen() only works inside a real user gesture.
+    // Re-arms once the button disappears (e.g. after disconnecting).
+    private static final String AUTO_FULLSCREEN_JS =
+            "(function() {" +
+            "  if (window.__piAutoFs) return;" +
+            "  window.__piAutoFs = true;" +
+            "  var done = false;" +
+            "  function onInput() {" +
+            "    if (document.fullscreenElement) return;" +
+            "    var btn = Array.prototype.find.call(document.querySelectorAll('button')," +
+            "        function(b) { return /enter full ?screen/i.test(b.textContent); });" +
+            "    if (!btn) { done = false; return; }" +
+            "    if (done) return;" +
+            "    done = true;" +
+            "    btn.click();" +
+            "  }" +
+            "  ['keydown', 'mousedown', 'pointerup', 'touchend'].forEach(function(t) {" +
+            "    document.addEventListener(t, onInput, true);" +
+            "  });" +
+            "})();";
 
     private WebView webView;
     private FrameLayout container;
@@ -50,8 +73,23 @@ public class MainActivity extends Activity {
         webView.getSettings().setDomStorageEnabled(true);
         webView.getSettings().setUseWideViewPort(false);
         webView.getSettings().setLoadWithOverviewMode(false);
+        webView.setVerticalScrollBarEnabled(false);
+        webView.setHorizontalScrollBarEnabled(false);
 
-        webView.setWebViewClient(new WebViewClient());
+        // Pi Connect focuses a hidden input for keyboard capture, and the WebView
+        // scrolls it into view, shifting the desktop. Pin the page at the origin.
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            webView.setOnScrollChangeListener((v, x, y, ox, oy) -> {
+                if (x != 0 || y != 0) v.scrollTo(0, 0);
+            });
+        }
+
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                view.evaluateJavascript(AUTO_FULLSCREEN_JS, null);
+            }
+        });
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onShowCustomView(View view, CustomViewCallback callback) {
