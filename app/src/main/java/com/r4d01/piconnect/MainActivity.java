@@ -5,9 +5,12 @@ import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.os.SystemClock;
 import android.view.Gravity;
+import android.view.InputDevice;
 import android.view.KeyEvent;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -28,9 +31,10 @@ public class MainActivity extends Activity {
 
     // Injected after each page load. While a remote session is open (Pi Connect's
     // full screen button is present) it:
-    // - clicks "Enter full screen" on the first tap or key press, since
-    //   requestFullscreen() only works inside a real user gesture; re-arms once the
-    //   button disappears (e.g. after disconnecting);
+    // - asks the app to tap "Enter full screen" as soon as the button appears, since
+    //   requestFullscreen() only works inside a real user gesture and a JS click()
+    //   isn't one. Once per session: if the user leaves fullscreen it stays left,
+    //   and it re-arms when the button disappears (e.g. after disconnecting);
     // - keeps the page scrolled to the origin, because Pi Connect focuses a hidden
     //   input for keyboard capture and the WebView scrolls it into view.
     private static final String PAGE_JS =
@@ -41,18 +45,24 @@ public class MainActivity extends Activity {
             "    return Array.prototype.find.call(document.querySelectorAll('button')," +
             "        function(b) { return re.test(b.textContent); });" +
             "  }" +
-            "  var done = false;" +
-            "  function onInput() {" +
-            "    if (document.fullscreenElement) return;" +
-            "    var btn = findButton(/enter full ?screen/i);" +
-            "    if (!btn) { done = false; return; }" +
-            "    if (done) return;" +
-            "    done = true;" +
-            "    btn.click();" +
+            "  var done = false, pending = false;" +
+            "  function schedule() {" +
+            "    if (!pending) { pending = true; setTimeout(check, 300); }" +
             "  }" +
-            "  ['keydown', 'mousedown', 'pointerup', 'touchend'].forEach(function(t) {" +
-            "    document.addEventListener(t, onInput, true);" +
-            "  });" +
+            "  function check() {" +
+            "    pending = false;" +
+            "    if (document.fullscreenElement) return;" +
+            "    if (!findButton(/full ?screen/i)) { done = false; return; }" +
+            "    var btn = findButton(/enter full ?screen/i);" +
+            "    if (done || !btn) return;" +
+            "    var r = btn.getBoundingClientRect();" +
+            "    if (!r.width || !r.height) { schedule(); return; }" +
+            "    done = true;" +
+            "    PiConnectApp.tap(r.left + r.width / 2, r.top + r.height / 2);" +
+            "  }" +
+            "  new MutationObserver(schedule).observe(document.documentElement," +
+            "      {childList: true, subtree: true, characterData: true});" +
+            "  schedule();" +
             "  window.addEventListener('scroll', function() {" +
             "    if ((window.scrollX || window.scrollY) && findButton(/full ?screen/i)) window.scrollTo(0, 0);" +
             "  });" +
@@ -116,12 +126,39 @@ public class MainActivity extends Activity {
             }
         });
 
+        webView.addJavascriptInterface(new Object() {
+            @JavascriptInterface
+            public void tap(float cssX, float cssY) {
+                runOnUiThread(() -> tapWebView(cssX, cssY));
+            }
+        }, "PiConnectApp");
+
         container.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
             // Deferred: changing child layout params during a layout pass can be dropped.
             if (r - l != or - ol || b - t != ob - ot) container.post(this::applyScales);
         });
 
         webView.loadUrl(TARGET_URL);
+    }
+
+    // Sends a touch tap at a point given in CSS px. Chromium treats it as real input,
+    // so the page gets the user activation that requestFullscreen() needs. CSS px
+    // equal dp here (no wide viewport, page zoom 1), and the event goes straight to
+    // the WebView, so its own scale transform doesn't apply.
+    private void tapWebView(float cssX, float cssY) {
+        if (fullscreenView != null) return;
+        float density = getResources().getDisplayMetrics().density;
+        float x = cssX * density;
+        float y = cssY * density;
+        long now = SystemClock.uptimeMillis();
+        MotionEvent down = MotionEvent.obtain(now, now, MotionEvent.ACTION_DOWN, x, y, 0);
+        MotionEvent up = MotionEvent.obtain(now, now, MotionEvent.ACTION_UP, x, y, 0);
+        down.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+        up.setSource(InputDevice.SOURCE_TOUCHSCREEN);
+        webView.dispatchTouchEvent(down);
+        webView.dispatchTouchEvent(up);
+        down.recycle();
+        up.recycle();
     }
 
     // Tears down the fullscreen view ourselves rather than waiting for Chromium to

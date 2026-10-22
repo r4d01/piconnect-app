@@ -17,7 +17,7 @@ A mobile browser gets in the way when you're trying to use a remote desktop:
 
 ## Features
 
-- Fullscreen Raspberry Pi Connect, entered automatically on your first tap or key press in a session
+- Goes straight to fullscreen as soon as you open a remote session
 - Desktop resolution matched to your device's real screen
 - **Volume up / down** — make everything larger or smaller (0.5×–3×, default 1.5×)
 - **Right Ctrl or Menu** — acts as the **Super** key on the remote desktop (alone, or in combos like Super + E)
