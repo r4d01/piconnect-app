@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon.png" width="96" alt="PiConnect app icon"></p>
 
-# <img src="https://cdn.simpleicons.org/raspberrypi" height="28" alt="Raspberry Pi"> Pi Connect App <img src="https://cdn.simpleicons.org/android" height="38" alt="Android">
+# <img src="https://cdn.simpleicons.org/raspberrypi" height="28" alt="Raspberry Pi"> Pi Connect App
 
 **Your Raspberry Pi lab, from anywhere.**
 
@@ -14,13 +14,15 @@ I made this app for my own needs. It isn't perfect, but it does everything I nee
 
 ## 💭 Why I built it
 
-I wanted a super portable PC, and my Raspberry Pi 5 was collecting dust. So I got a mini Bluetooth keyboard and mouse, and turned my Android tablet (and phone) into that PC: the tablet is the screen, the Pi does the computing.
+I wanted a super portable PC, and my Raspberry Pi 5 was collecting dust. So I got a mini BT keyboard and mouse, and turned my Android tablet (and phone) into that PC: the tablet is the screen, the Pi does the computing.
 
-The catch was screen sharing in a mobile browser. The remote desktop never displayed properly: on my phone the resolution made it unusable, and on the tablet I had to fix it every time I connected. That got annoying fast, so I built an app that gets it right on its own.
+The catch was screen sharing in a mobile browser. The remote desktop never displayed properly: on my phone the resolution made it unusable, and on the tablet I had to zoom in and out to fix it every time I connected. That got annoying fast.
+
+I didn't want to use the browser for this at all. I wanted a separate app that opens everything in fullscreen in two clicks — open the app, then **Connect via → Screen sharing** — and works right away, without any zooming.
 
 I don't need super performance. I live mainly in the terminal and the browser, and a Raspberry Pi 5 with a fast NVMe drive handles that just fine.
 
-I also use it to manage my home lab: a headless cluster of three Raspberry Pi 4s, which I reach through the remote shell.
+I also use it to manage my home lab: a headless Raspberry Pi 4 cluster, which I reach through the remote shell.
 
 ## ✨ What it does
 
@@ -55,7 +57,7 @@ Requires Android 5.0 or newer. Hiding the system bars and the on-screen keyboard
 
 ### 💡 Recommended setup
 
-- **A tablet with a Bluetooth keyboard and mouse.** A phone works too, and so does touch, but a remote desktop is much nicer with real input devices.
+- **A tablet with a BT keyboard and mouse.** A phone works too, and so does touch, but a remote desktop is much nicer with real input devices.
 - **Turn off the on-screen keyboard for physical keyboards** in Android's settings, usually under **Settings → System → Keyboard → Physical keyboard → Use on-screen keyboard**. The app hides it anyway, but with this off, the taskbar doesn't even flash when you click into a text field.
 - **Nothing extra on the Pi.** Raspberry Pi OS already switches windows with Alt+Tab.
 
