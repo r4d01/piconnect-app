@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.os.SystemClock;
 import android.view.Gravity;
 import android.view.InputDevice;
+import android.view.KeyCharacterMap;
 import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
@@ -33,6 +34,7 @@ public class MainActivity extends Activity {
     private static final float MIN_SCALE = 0.5f;
     private static final float MAX_SCALE = 3.0f;
     private static final float SCALE_STEP = 0.25f;
+    private static final int SCANCODE_LEFTMETA = 125; // Linux KEY_LEFTMETA
 
     // Injected after each page load. While a remote session is open (Pi Connect's
     // full screen button is present) it:
@@ -274,19 +276,23 @@ public class MainActivity extends Activity {
         return keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_CTRL_RIGHT;
     }
 
-    private static KeyEvent withMeta(KeyEvent e, int action, int keyCode, int repeat) {
+    // Chromium derives the DOM `code` (e.g. "MetaLeft") from the scan code, and Pi
+    // Connect ignores keys without one, so synthetic events must carry a scan code.
+    private static KeyEvent withMeta(KeyEvent e, int action, int keyCode, int scanCode, int repeat) {
         int meta = e.getMetaState() | KeyEvent.META_META_ON | KeyEvent.META_META_LEFT_ON;
         // Drop the stand-in Right Ctrl from the modifiers the page sees.
         meta &= ~KeyEvent.META_CTRL_RIGHT_ON;
         if ((meta & KeyEvent.META_CTRL_LEFT_ON) == 0) meta &= ~KeyEvent.META_CTRL_ON;
-        return new KeyEvent(e.getDownTime(), e.getEventTime(), action, keyCode, repeat, meta);
+        return new KeyEvent(e.getDownTime(), e.getEventTime(), action, keyCode, repeat, meta,
+                e.getDeviceId(), scanCode, e.getFlags(), e.getSource());
     }
 
     private void releaseSuper() {
         if (!superDown) return;
         superDown = false;
         long now = SystemClock.uptimeMillis();
-        sendKey(new KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_META_LEFT, 0));
+        sendKey(new KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_META_LEFT, 0, 0,
+                KeyCharacterMap.VIRTUAL_KEYBOARD, SCANCODE_LEFTMETA, 0, InputDevice.SOURCE_KEYBOARD));
     }
 
     // Android consumes the real Super key, so Menu / Right Ctrl stands in for it:
@@ -300,7 +306,7 @@ public class MainActivity extends Activity {
                 superDown = true;
                 // TEMPORARY diagnostic: confirms the stand-in key reaches the app.
                 Toast.makeText(this, "Super", Toast.LENGTH_SHORT).show();
-                sendKey(withMeta(e, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_META_LEFT, 0));
+                sendKey(withMeta(e, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_META_LEFT, SCANCODE_LEFTMETA, 0));
             } else if (e.getAction() == KeyEvent.ACTION_UP) {
                 releaseSuper();
             }
@@ -309,7 +315,7 @@ public class MainActivity extends Activity {
 
         if (superDown && code != KeyEvent.KEYCODE_VOLUME_UP
                 && code != KeyEvent.KEYCODE_VOLUME_DOWN && code != KeyEvent.KEYCODE_BACK) {
-            sendKey(withMeta(e, e.getAction(), code, e.getRepeatCount()));
+            sendKey(withMeta(e, e.getAction(), code, e.getScanCode(), e.getRepeatCount()));
             return true;
         }
 
