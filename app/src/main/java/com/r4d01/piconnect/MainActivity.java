@@ -31,6 +31,7 @@ public class MainActivity extends Activity {
     private WebChromeClient.CustomViewCallback fullscreenCallback;
     private SharedPreferences prefs;
     private float scale;
+    private boolean superDown;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -123,6 +124,45 @@ public class MainActivity extends Activity {
         prefs.edit().putFloat(PREF_SCALE, scale).apply();
         applyScales();
         Toast.makeText(this, String.format(Locale.US, "Scale %.2fx", scale), Toast.LENGTH_SHORT).show();
+    }
+
+    private static boolean isSuperStandIn(int keyCode) {
+        return keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_CTRL_RIGHT;
+    }
+
+    private static KeyEvent withMeta(KeyEvent e, int action, int keyCode, int repeat) {
+        int meta = e.getMetaState() | KeyEvent.META_META_ON | KeyEvent.META_META_LEFT_ON;
+        // Drop the stand-in Right Ctrl from the modifiers the page sees.
+        meta &= ~KeyEvent.META_CTRL_RIGHT_ON;
+        if ((meta & KeyEvent.META_CTRL_LEFT_ON) == 0) meta &= ~KeyEvent.META_CTRL_ON;
+        return new KeyEvent(e.getDownTime(), e.getEventTime(), action, keyCode, repeat, meta);
+    }
+
+    // Android consumes the real Super key, so Menu / Right Ctrl stands in for it:
+    // the page receives genuine Meta key events and Meta-modified combos.
+    @Override
+    public boolean dispatchKeyEvent(KeyEvent e) {
+        int code = e.getKeyCode();
+        View target = fullscreenView != null ? fullscreenView : webView;
+
+        if (isSuperStandIn(code)) {
+            if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0 && !superDown) {
+                superDown = true;
+                target.dispatchKeyEvent(withMeta(e, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_META_LEFT, 0));
+            } else if (e.getAction() == KeyEvent.ACTION_UP && superDown) {
+                superDown = false;
+                target.dispatchKeyEvent(withMeta(e, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_META_LEFT, 0));
+            }
+            return true;
+        }
+
+        if (superDown && code != KeyEvent.KEYCODE_VOLUME_UP
+                && code != KeyEvent.KEYCODE_VOLUME_DOWN && code != KeyEvent.KEYCODE_BACK) {
+            target.dispatchKeyEvent(withMeta(e, e.getAction(), code, e.getRepeatCount()));
+            return true;
+        }
+
+        return super.dispatchKeyEvent(e);
     }
 
     @Override
