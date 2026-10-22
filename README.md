@@ -77,7 +77,6 @@ Your Raspberry Pi ID gives access to every Pi you've connected to it, and you si
 - 🔀 **Real Alt+Tab and the Super key go to Android**, not to the Pi. Use Right Ctrl + Tab instead. Super can't be passed through.
 - 🎛️ **Right Ctrl isn't a Ctrl key** in this app, because it stands in for Alt. Left Ctrl works normally.
 - 🚪 **No sign-out button**, because Raspberry Pi Connect's menus are hidden. To sign out, clear the app's data: **Settings → Apps → PiConnect → Storage → Clear data**.
-- ✍️ **Dead keys may not combine** while a physical keyboard is attached, for example `ˇ` then `c` for `č`. Letters that are directly on a key work fine.
 - 🧩 **It depends on Raspberry Pi Connect's web pages.** If Raspberry Pi Connect changes its "Enter full screen" button or its device list layout, automatic fullscreen or the trimmed device list may stop working until the app is updated.
 - 🔇 **No sound.** Raspberry Pi Connect's screen sharing doesn't transfer audio.
 
