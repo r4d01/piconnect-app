@@ -1,7 +1,11 @@
 package com.r4d01.piconnect;
 
 import android.app.Activity;
+import android.content.ActivityNotFoundException;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.Configuration;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
@@ -18,16 +22,22 @@ import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
 import android.widget.Toast;
 
 import java.util.Locale;
+import java.util.regex.Pattern;
 
 public class MainActivity extends Activity {
 
-    private static final String TARGET_URL = "https://connect.raspberrypi.com";
+    private static final String HOME_URL = "https://connect.raspberrypi.com/devices";
+    // Pi Connect pages the app shows: sign-in, the device list and the two session
+    // types. Anything else on connect.raspberrypi.com sends the user back home.
+    private static final Pattern ALLOWED_PATH = Pattern.compile(
+            "/|/devices/?|/sign-in.*|/auth/.*|/devices/[^/]+/(screen-sharing|remote-shell)-session/?");
     private static final String PREFS = "piconnect";
     private static final String PREF_SCALE = "scale";
     private static final float DEFAULT_SCALE = 1.5f;
@@ -101,6 +111,25 @@ public class MainActivity extends Activity {
             "  window.addEventListener('scroll', function() {" +
             "    if ((window.scrollX || window.scrollY) && controls(/full ?screen/i).length) window.scrollTo(0, 0);" +
             "  });" +
+            // Pi Connect uses Turbo, whose in-page navigations never reach
+            // shouldOverrideUrlLoading, so they're checked here too.
+            "  document.addEventListener('turbo:before-visit', function(e) {" +
+            "    if (!PiConnectApp.allowInApp(e.detail.url)) e.preventDefault();" +
+            "  });" +
+            // On the device list, show only its <main> section: hide every element
+            // that is neither inside <main> nor one of its ancestors. Device names
+            // link to detail pages the app doesn't show, so they aren't links here.
+            // The class is refreshed after Turbo visits; the <style> survives them.
+            "  var style = document.createElement('style');" +
+            "  style.textContent =" +
+            "      'html.piapp-devices body *:not(:has(main)):not(main):not(main *) { display: none !important; }' +" +
+            "      'html.piapp-devices main a.link[href^=\"/devices/\"] { pointer-events: none; text-decoration: none; }';" +
+            "  document.head.appendChild(style);" +
+            "  function markPage() {" +
+            "    document.documentElement.classList.toggle('piapp-devices', /^\\/devices\\/?$/.test(location.pathname));" +
+            "  }" +
+            "  markPage();" +
+            "  document.addEventListener('turbo:load', markPage);" +
             "})();";
 
     private WebView webView;
@@ -137,6 +166,19 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 view.evaluateJavascript(PAGE_JS, null);
             }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                // Subframes aren't restricted.
+                return request.isForMainFrame() && !allowInApp(request.getUrl());
+            }
+
+            @SuppressWarnings("deprecation")
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                // Called instead of the method above before Android 7.
+                return !allowInApp(Uri.parse(url));
+            }
         });
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
@@ -168,14 +210,63 @@ public class MainActivity extends Activity {
             public void tap(float cssX, float cssY) {
                 runOnUiThread(() -> tapWebView(cssX, cssY));
             }
+
+            @JavascriptInterface
+            public boolean allowInApp(String url) {
+                return MainActivity.this.allowInApp(Uri.parse(url));
+            }
         }, "PiConnectApp");
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            container.setOnApplyWindowInsetsListener((v, insets) -> {
+                // Swipe-revealed transient bars don't count as visible here, so this
+                // only fires when something has brought the bars back for good.
+                if (insets.isVisible(WindowInsets.Type.navigationBars())) {
+                    // TEMPORARY diagnostic: why do the bars come back in the remote shell?
+                    Configuration c = getResources().getConfiguration();
+                    Toast.makeText(this, String.format(Locale.US,
+                            "Bars shown: ime=%b keyboard=%d hardKeyboardHidden=%d",
+                            insets.isVisible(WindowInsets.Type.ime()), c.keyboard, c.hardKeyboardHidden),
+                            Toast.LENGTH_LONG).show();
+                    v.post(this::hideSystemBars);
+                }
+                return insets;
+            });
+        }
 
         container.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) -> {
             // Deferred: changing child layout params during a layout pass can be dropped.
             if (r - l != or - ol || b - t != ob - ot) container.post(this::applyScales);
         });
 
-        webView.loadUrl(TARGET_URL);
+        webView.loadUrl(HOME_URL);
+    }
+
+    // The app only shows Pi Connect's device list and sessions (plus Raspberry Pi ID
+    // for signing in). Returns whether a navigation may happen in the WebView; if
+    // not, handles it: other Pi Connect pages go back to the device list, other sites
+    // open in the user's browser. Called on the UI thread and from the JS bridge.
+    private boolean allowInApp(Uri uri) {
+        String scheme = uri.getScheme();
+        String host = uri.getHost();
+        String path = uri.getPath() == null || uri.getPath().isEmpty() ? "/" : uri.getPath();
+        if ("https".equals(scheme) && "id.raspberrypi.com".equals(host)) return true;
+        if ("https".equals(scheme) && "connect.raspberrypi.com".equals(host)) {
+            if (ALLOWED_PATH.matcher(path).matches()) return true;
+            runOnUiThread(() -> webView.loadUrl(HOME_URL));
+            return false;
+        }
+        if ("about".equals(scheme)) return true;
+        if ("http".equals(scheme) || "https".equals(scheme) || "mailto".equals(scheme)) {
+            runOnUiThread(() -> {
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                } catch (ActivityNotFoundException ignored) {
+                    // Nowhere to open it: just stay on the current page.
+                }
+            });
+        }
+        return false;
     }
 
     // Immersive mode: hides the status bar, navigation bar and tablet taskbar; an edge

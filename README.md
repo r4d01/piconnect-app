@@ -22,6 +22,7 @@ A mobile browser gets in the way when you're trying to use a remote desktop:
 - **Volume up / down** — make everything larger or smaller (0.5×–3×, default 1.5×)
 - **Right Ctrl or Menu** — acts as **Alt** on the remote desktop: hold it and press Tab to switch windows (Shift+Tab goes back), or use it for any other Alt shortcut
 - **Back** — leaves fullscreen, then navigates back
+- Shows just your device list and remote sessions — no menus, account pages or other sites (external links open in your regular browser)
 - Handles rotation and attaching/detaching a keyboard without reloading the session
 
 ## Getting started
