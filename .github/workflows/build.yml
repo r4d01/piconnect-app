@@ -10,6 +10,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    # The release step needs to create a release; the default token is read-only.
+    permissions:
+      contents: write
 
     steps:
       - uses: actions/checkout@v4
