@@ -154,6 +154,7 @@ public class MainActivity extends Activity {
                 applyScales();
                 // INVISIBLE (not GONE) keeps the WebView's size so the page doesn't resize.
                 webView.setVisibility(View.INVISIBLE);
+                notifyPageResized();
             }
 
             @Override
@@ -238,6 +239,20 @@ public class MainActivity extends Activity {
         fullscreenCallback = null;
         webView.setVisibility(View.VISIBLE);
         callback.onCustomViewHidden();
+        notifyPageResized();
+    }
+
+    // In a browser, entering or leaving fullscreen resizes the window, and Pi Connect
+    // renegotiates the remote desktop size on that resize event. Here the fullscreen
+    // view is exactly the WebView's size, so no resize fires and a stream started
+    // before fullscreen stays sized for the area between Pi Connect's toolbars
+    // (letterboxed). Fire the event ourselves once the new layout has settled.
+    private void notifyPageResized() {
+        String js = "window.dispatchEvent(new Event('resize'));" +
+                "if (window.visualViewport) window.visualViewport.dispatchEvent(new Event('resize'));";
+        for (long delay : new long[] {200, 1000}) {
+            webView.postDelayed(() -> webView.evaluateJavascript(js, null), delay);
+        }
     }
 
     // Lays the view out at (dpr / scale) times the screen size, then shrinks it back
