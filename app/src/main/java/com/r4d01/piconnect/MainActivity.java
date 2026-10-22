@@ -34,7 +34,12 @@ public class MainActivity extends Activity {
     private static final float MIN_SCALE = 0.5f;
     private static final float MAX_SCALE = 3.0f;
     private static final float SCALE_STEP = 0.25f;
-    private static final int SCANCODE_LEFTMETA = 125; // Linux KEY_LEFTMETA
+
+    // What the stand-in key (Right Ctrl / Menu) sends to the remote desktop: Left Alt,
+    // so stand-in + Tab reaches the Pi as Alt+Tab, which Android would otherwise take.
+    private static final int REMOTE_MOD_KEYCODE = KeyEvent.KEYCODE_ALT_LEFT;
+    private static final int REMOTE_MOD_SCANCODE = 56; // Linux KEY_LEFTALT
+    private static final int REMOTE_MOD_META = KeyEvent.META_ALT_ON | KeyEvent.META_ALT_LEFT_ON;
 
     // Injected after each page load. While a remote session is open (Pi Connect's
     // full screen button is present) it:
@@ -70,9 +75,9 @@ public class MainActivity extends Activity {
             // TEMPORARY diagnostic: shows what modifier key events the page receives.
             "  ['keydown', 'keyup'].forEach(function(t) {" +
             "    document.addEventListener(t, function(e) {" +
-            "      if (e.key !== 'Meta' && e.key !== 'Control' && !e.metaKey) return;" +
+            "      if (e.key !== 'Alt' && !e.altKey) return;" +
             "      PiConnectApp.debug('page ' + e.type + ' key=' + e.key + ' code=' + e.code +" +
-            "          ' meta=' + e.metaKey + ' trusted=' + e.isTrusted);" +
+            "          ' alt=' + e.altKey + ' trusted=' + e.isTrusted);" +
             "    }, true);" +
             "  });" +
             "  new MutationObserver(schedule).observe(document.documentElement," +
@@ -89,7 +94,7 @@ public class MainActivity extends Activity {
     private WebChromeClient.CustomViewCallback fullscreenCallback;
     private SharedPreferences prefs;
     private float scale;
-    private boolean superDown;
+    private boolean standInDown;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -97,7 +102,7 @@ public class MainActivity extends Activity {
         setContentView(R.layout.activity_main);
         hideSystemBars();
 
-        prefs =getSharedPreferences(PREFS, MODE_PRIVATE);
+        prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         scale = prefs.getFloat(PREF_SCALE, DEFAULT_SCALE);
 
         container = findViewById(R.id.container);
@@ -272,14 +277,14 @@ public class MainActivity extends Activity {
         getWindow().superDispatchKeyEvent(e);
     }
 
-    private static boolean isSuperStandIn(int keyCode) {
+    private static boolean isStandIn(int keyCode) {
         return keyCode == KeyEvent.KEYCODE_MENU || keyCode == KeyEvent.KEYCODE_CTRL_RIGHT;
     }
 
-    // Chromium derives the DOM `code` (e.g. "MetaLeft") from the scan code, and Pi
+    // Chromium derives the DOM `code` (e.g. "AltLeft") from the scan code, and Pi
     // Connect ignores keys without one, so synthetic events must carry a scan code.
-    private static KeyEvent withMeta(KeyEvent e, int action, int keyCode, int scanCode, int repeat) {
-        int meta = e.getMetaState() | KeyEvent.META_META_ON | KeyEvent.META_META_LEFT_ON;
+    private static KeyEvent withRemoteMod(KeyEvent e, int action, int keyCode, int scanCode, int repeat) {
+        int meta = e.getMetaState() | REMOTE_MOD_META;
         // Drop the stand-in Right Ctrl from the modifiers the page sees.
         meta &= ~KeyEvent.META_CTRL_RIGHT_ON;
         if ((meta & KeyEvent.META_CTRL_LEFT_ON) == 0) meta &= ~KeyEvent.META_CTRL_ON;
@@ -287,35 +292,34 @@ public class MainActivity extends Activity {
                 e.getDeviceId(), scanCode, e.getFlags(), e.getSource());
     }
 
-    private void releaseSuper() {
-        if (!superDown) return;
-        superDown = false;
+    private void releaseStandIn() {
+        if (!standInDown) return;
+        standInDown = false;
         long now = SystemClock.uptimeMillis();
-        sendKey(new KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_META_LEFT, 0, 0,
-                KeyCharacterMap.VIRTUAL_KEYBOARD, SCANCODE_LEFTMETA, 0, InputDevice.SOURCE_KEYBOARD));
+        sendKey(new KeyEvent(now, now, KeyEvent.ACTION_UP, REMOTE_MOD_KEYCODE, 0, 0,
+                KeyCharacterMap.VIRTUAL_KEYBOARD, REMOTE_MOD_SCANCODE, 0, InputDevice.SOURCE_KEYBOARD));
     }
 
-    // Android consumes the real Super key, so Menu / Right Ctrl stands in for it:
-    // the page receives genuine Meta key events and Meta-modified combos.
+    // Android intercepts Alt+Tab, so Menu / Right Ctrl stands in for Alt: the page
+    // receives genuine Alt key events and Alt-modified combos, and holding the
+    // stand-in while pressing Tab repeatedly cycles windows on the Pi.
     @Override
     public boolean dispatchKeyEvent(KeyEvent e) {
         int code = e.getKeyCode();
 
-        if (isSuperStandIn(code)) {
-            if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0 && !superDown) {
-                superDown = true;
-                // TEMPORARY diagnostic: confirms the stand-in key reaches the app.
-                Toast.makeText(this, "Super", Toast.LENGTH_SHORT).show();
-                sendKey(withMeta(e, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_META_LEFT, SCANCODE_LEFTMETA, 0));
+        if (isStandIn(code)) {
+            if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0 && !standInDown) {
+                standInDown = true;
+                sendKey(withRemoteMod(e, KeyEvent.ACTION_DOWN, REMOTE_MOD_KEYCODE, REMOTE_MOD_SCANCODE, 0));
             } else if (e.getAction() == KeyEvent.ACTION_UP) {
-                releaseSuper();
+                releaseStandIn();
             }
             return true;
         }
 
-        if (superDown && code != KeyEvent.KEYCODE_VOLUME_UP
+        if (standInDown && code != KeyEvent.KEYCODE_VOLUME_UP
                 && code != KeyEvent.KEYCODE_VOLUME_DOWN && code != KeyEvent.KEYCODE_BACK) {
-            sendKey(withMeta(e, e.getAction(), code, e.getScanCode(), e.getRepeatCount()));
+            sendKey(withRemoteMod(e, e.getAction(), code, e.getScanCode(), e.getRepeatCount()));
             return true;
         }
 
@@ -330,7 +334,7 @@ public class MainActivity extends Activity {
             hideSystemBars();
         } else {
             // The stand-in's key-up never arrives if focus moves away while it's held.
-            releaseSuper();
+            releaseStandIn();
         }
     }
 

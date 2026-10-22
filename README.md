@@ -13,14 +13,14 @@ A mobile browser gets in the way when you're trying to use a remote desktop:
 - **Resolution.** Phones and tablets report a small "CSS" screen size to websites, so Raspberry Pi Connect streams a tiny, blurry desktop. This app reports the real pixel resolution, so you get a sharp desktop sized to your screen.
 - **Screen space.** No address bar, no tabs, no status bar, navigation bar or tablet taskbar — just the desktop. Swipe in from the edge of the screen when you need the system bars.
 - **Text size.** Adjustable with the volume keys, and remembered between sessions.
-- **The Super key.** Android swallows the Super/Windows key. The app gives you a stand-in so desktop shortcuts still work.
+- **Window switching.** Android takes Alt+Tab for itself. The app gives you a stand-in Alt key so you can switch windows on the Pi.
 
 ## Features
 
 - Goes straight to fullscreen as soon as you open a remote session
 - Desktop resolution matched to your device's real screen
 - **Volume up / down** — make everything larger or smaller (0.5×–3×, default 1.5×)
-- **Right Ctrl or Menu** — acts as the **Super** key on the remote desktop (alone, or in combos like Super + E)
+- **Right Ctrl or Menu** — acts as **Alt** on the remote desktop: hold it and press Tab to switch windows (Shift+Tab goes back), or use it for any other Alt shortcut
 - **Back** — leaves fullscreen, then navigates back
 - Handles rotation and attaching/detaching a keyboard without reloading the session
 
@@ -36,7 +36,8 @@ Requires Android 5.0 or newer.
 ## Known limitations
 
 - **Alt+Tab and other system shortcuts** go to Android, not to the Pi. Android doesn't let apps capture them.
-- **The real Super key** opens Android's launcher. Use Right Ctrl or Menu instead. While held as Super, Right Ctrl can't be used as an ordinary Ctrl key; Left Ctrl is unaffected.
+- **Alt+Tab with the real Alt key** switches Android apps. Use Right Ctrl + Tab instead. Right Ctrl can't be used as an ordinary Ctrl key; Left Ctrl is unaffected.
+- **The Super key** opens Android's launcher and can't be passed to the Pi.
 - **Auto-fullscreen** works by pressing Raspberry Pi Connect's own "Enter full screen" button. If Raspberry Pi Connect changes that button, auto-fullscreen may stop working until the app is updated.
 
 ## Building
