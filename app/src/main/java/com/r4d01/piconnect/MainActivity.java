@@ -33,7 +33,22 @@ public class MainActivity extends Activity {
         webView.getSettings().setUseWideViewPort(true);
         webView.getSettings().setLoadWithOverviewMode(true);
 
-        webView.setWebViewClient(new WebViewClient());
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                // Report physical pixels to the page so Raspberry Pi Connect
+                // negotiates a resolution matching the device's actual screen.
+                view.evaluateJavascript(
+                    "(function() {" +
+                    "  var dpr = window.devicePixelRatio || 1;" +
+                    "  var meta = document.querySelector('meta[name=viewport]');" +
+                    "  if (!meta) { meta = document.createElement('meta'); meta.name='viewport'; document.head.appendChild(meta); }" +
+                    "  meta.content = 'width=' + Math.round(screen.width * dpr) + ', initial-scale=' + (1/dpr);" +
+                    "})();",
+                    null
+                );
+            }
+        });
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
             public void onShowCustomView(View view, CustomViewCallback callback) {
