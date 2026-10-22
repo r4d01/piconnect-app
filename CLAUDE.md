@@ -28,4 +28,4 @@ Everything lives in `MainActivity.java`. The non-obvious parts:
 - **System bars.** `hideSystemBars()` uses immersive mode (re-applied on every window focus gain) and lays content out edge-to-edge, so a transient bar swipe overlays the page instead of resizing it.
 - **Manifest.** The activity handles orientation, screen size and keyboard config changes itself and uses `adjustNothing`, so rotating or attaching a keyboard never reloads or pans the page.
 
-The launcher icon is a vector: an adaptive icon in `mipmap-anydpi-v26/` (foreground in `drawable/ic_launcher_foreground.xml`) and a duplicate of the same artwork for pre-Android 8 in `mipmap/ic_launcher.xml`. Edit both together. It deliberately avoids the Raspberry Pi logo, which is a trademark.
+The launcher icon is a vector: an adaptive icon in `mipmap-anydpi-v26/` (foreground in `drawable/ic_launcher_foreground.xml`) and a duplicate of the same artwork for pre-Android 8 in `mipmap/ic_launcher.xml`. Edit both together. The artwork is a generic raspberry (round drupelets, star-shaped calyx) with a wireless signal; keep it visibly different from the official Raspberry Pi logo, which is a trademark.
