@@ -19,7 +19,7 @@ A mobile browser gets in the way when you're trying to use a remote desktop:
 
 - Goes straight to fullscreen as soon as you open a remote session
 - Desktop resolution matched to your device's real screen
-- **Volume up / down** — make everything larger or smaller (0.5×–3×, default 1.5×)
+- **Volume up / down** — make everything larger or smaller (0.5×–3×, default 1.25×); a hint reminds you at start-up, since they no longer change the volume
 - **Right Ctrl or Menu** — acts as **Alt** on the remote desktop: hold it and press Tab to switch windows (Shift+Tab goes back), or use it for any other Alt shortcut
 - **Back** — leaves fullscreen, then navigates back
 - Shows just your device list and remote sessions — no menus, account pages or other sites (external links open in your regular browser)

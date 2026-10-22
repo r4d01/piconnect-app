@@ -4,7 +4,6 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.content.res.Configuration;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -40,7 +39,7 @@ public class MainActivity extends Activity {
             "/|/devices/?|/sign-in.*|/auth/.*|/devices/[^/]+/(screen-sharing|remote-shell)-session/?");
     private static final String PREFS = "piconnect";
     private static final String PREF_SCALE = "scale";
-    private static final float DEFAULT_SCALE = 1.5f;
+    private static final float DEFAULT_SCALE = 1.25f;
     private static final float MIN_SCALE = 0.5f;
     private static final float MAX_SCALE = 3.0f;
     private static final float SCALE_STEP = 0.25f;
@@ -148,6 +147,10 @@ public class MainActivity extends Activity {
 
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         scale = prefs.getFloat(PREF_SCALE, DEFAULT_SCALE);
+        // The volume keys don't change the volume in this app, so say what they do.
+        Toast.makeText(this, String.format(Locale.US,
+                "Volume buttons change the scale (now %.2fx), not the volume", scale),
+                Toast.LENGTH_LONG).show();
 
         container = findViewById(R.id.container);
         webView = findViewById(R.id.webview);
@@ -219,23 +222,15 @@ public class MainActivity extends Activity {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             container.setOnApplyWindowInsetsListener((v, insets) -> {
-                boolean ime = insets.isVisible(WindowInsets.Type.ime());
-                boolean physicalKeyboard = KeyboardWebView.hasPhysicalKeyboard();
                 // A shown IME (even just its physical-keyboard toolbar) brings the
                 // tablet taskbar back. With a real keyboard attached it isn't needed.
-                if (ime && physicalKeyboard) {
+                if (insets.isVisible(WindowInsets.Type.ime()) && KeyboardWebView.hasPhysicalKeyboard()) {
                     WindowInsetsController controller = getWindow().getInsetsController();
                     if (controller != null) controller.hide(WindowInsets.Type.ime());
                 }
                 // Swipe-revealed transient bars don't count as visible here, so this
                 // only fires when something has brought the bars back for good.
                 if (insets.isVisible(WindowInsets.Type.navigationBars())) {
-                    // TEMPORARY diagnostic: why do the bars come back in the remote shell?
-                    Configuration c = getResources().getConfiguration();
-                    Toast.makeText(this, String.format(Locale.US,
-                            "Bars shown: ime=%b physicalKeyboard=%b keyboard=%d hardKeyboardHidden=%d",
-                            ime, physicalKeyboard, c.keyboard, c.hardKeyboardHidden),
-                            Toast.LENGTH_LONG).show();
                     v.post(this::hideSystemBars);
                 }
                 return insets;
