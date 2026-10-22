@@ -11,7 +11,7 @@ The app is a lightweight fullscreen wrapper around [Raspberry Pi Connect](https:
 A mobile browser gets in the way when you're trying to use a remote desktop:
 
 - **Resolution.** Phones and tablets report a small "CSS" screen size to websites, so Raspberry Pi Connect streams a tiny, blurry desktop. This app reports the real pixel resolution, so you get a sharp desktop sized to your screen.
-- **Screen space.** No address bar, no tabs, no status bar — just the desktop.
+- **Screen space.** No address bar, no tabs, no status bar, navigation bar or tablet taskbar — just the desktop. Swipe in from the edge of the screen when you need the system bars.
 - **Text size.** Adjustable with the volume keys, and remembered between sessions.
 - **The Super key.** Android swallows the Super/Windows key. The app gives you a stand-in so desktop shortcuts still work.
 
