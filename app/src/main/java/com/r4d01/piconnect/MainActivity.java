@@ -249,8 +249,11 @@ public class MainActivity extends Activity {
         Toast.makeText(this, String.format(Locale.US, "Scale %.2fx", scale), Toast.LENGTH_SHORT).show();
     }
 
-    private View keyTarget() {
-        return fullscreenView != null ? fullscreenView : webView;
+    // Delivers a key event the way real keys are delivered after the activity: to
+    // whichever view has keyboard focus. Dispatching to the WebView or fullscreen view
+    // directly drops the event when that view isn't the focused one.
+    private void sendKey(KeyEvent e) {
+        getWindow().superDispatchKeyEvent(e);
     }
 
     private static boolean isSuperStandIn(int keyCode) {
@@ -269,8 +272,7 @@ public class MainActivity extends Activity {
         if (!superDown) return;
         superDown = false;
         long now = SystemClock.uptimeMillis();
-        keyTarget().dispatchKeyEvent(
-                new KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_META_LEFT, 0));
+        sendKey(new KeyEvent(now, now, KeyEvent.ACTION_UP, KeyEvent.KEYCODE_META_LEFT, 0));
     }
 
     // Android consumes the real Super key, so Menu / Right Ctrl stands in for it:
@@ -282,7 +284,9 @@ public class MainActivity extends Activity {
         if (isSuperStandIn(code)) {
             if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0 && !superDown) {
                 superDown = true;
-                keyTarget().dispatchKeyEvent(withMeta(e, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_META_LEFT, 0));
+                // TEMPORARY diagnostic: confirms the stand-in key reaches the app.
+                Toast.makeText(this, "Super", Toast.LENGTH_SHORT).show();
+                sendKey(withMeta(e, KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_META_LEFT, 0));
             } else if (e.getAction() == KeyEvent.ACTION_UP) {
                 releaseSuper();
             }
@@ -291,7 +295,7 @@ public class MainActivity extends Activity {
 
         if (superDown && code != KeyEvent.KEYCODE_VOLUME_UP
                 && code != KeyEvent.KEYCODE_VOLUME_DOWN && code != KeyEvent.KEYCODE_BACK) {
-            keyTarget().dispatchKeyEvent(withMeta(e, e.getAction(), code, e.getRepeatCount()));
+            sendKey(withMeta(e, e.getAction(), code, e.getRepeatCount()));
             return true;
         }
 
