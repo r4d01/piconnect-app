@@ -1,6 +1,6 @@
 <p align="center"><img src="docs/icon.png" width="96" alt="PiConnect app icon"></p>
 
-# Pi Connect App
+# Raspberry Pi Connect App (Android)
 
 **Your Raspberry Pi lab, from anywhere.**
 
@@ -20,7 +20,7 @@ The catch was screen sharing in a mobile browser. The remote desktop never displ
 
 I don't need super performance. I live mainly in the terminal and the browser, and a Raspberry Pi 5 with a fast NVMe drive handles that just fine.
 
-I also use it to manage my home lab: a headless cluster of three Raspberry Pi 4s running my agents, which I reach through the remote shell.
+I also use it to manage my home lab: a headless cluster of three Raspberry Pi 4s, which I reach through the remote shell.
 
 ## ✨ What it does
 
