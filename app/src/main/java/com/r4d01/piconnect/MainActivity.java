@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
 import android.hardware.input.InputManager;
 import android.net.Uri;
 import android.os.Build;
@@ -22,10 +23,12 @@ import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
+import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.FrameLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.util.Locale;
@@ -44,6 +47,7 @@ public class MainActivity extends Activity {
     private static final float MIN_SCALE = 0.5f;
     private static final float MAX_SCALE = 3.0f;
     private static final float SCALE_STEP = 0.25f;
+    private static final long SLOW_LOAD_MS = 15000;
 
     // What the stand-in key (Right Ctrl / Menu) sends to the remote desktop: Left Alt,
     // so stand-in + Tab reaches the Pi as Alt+Tab, which Android would otherwise take.
@@ -139,6 +143,10 @@ public class MainActivity extends Activity {
     private SharedPreferences prefs;
     private float scale;
     private boolean standInDown;
+    private View loadProblem;
+    private TextView loadProblemText;
+    private boolean loadFailed;
+    private final Runnable slowLoad = () -> showLoadProblem(R.string.load_slow);
     private InputManager inputManager;
     private final InputManager.InputDeviceListener keyboardListener =
             new InputManager.InputDeviceListener() {
@@ -183,10 +191,36 @@ public class MainActivity extends Activity {
         webView.setVerticalScrollBarEnabled(false);
         webView.setHorizontalScrollBarEnabled(false);
 
+        loadProblem = findViewById(R.id.load_problem);
+        loadProblemText = findViewById(R.id.load_problem_text);
+        findViewById(R.id.reload).setOnClickListener(v -> reload());
+
         webView.setWebViewClient(new WebViewClient() {
             @Override
+            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                loadFailed = false;
+                webView.removeCallbacks(slowLoad);
+                webView.postDelayed(slowLoad, SLOW_LOAD_MS);
+            }
+
+            @Override
             public void onPageFinished(WebView view, String url) {
+                webView.removeCallbacks(slowLoad);
+                // Also called after a failed load, which should keep its message.
+                if (!loadFailed) loadProblem.setVisibility(View.GONE);
                 view.evaluateJavascript(PAGE_JS, null);
+            }
+
+            @Override
+            public void onReceivedError(WebView view, WebResourceRequest request, WebResourceError error) {
+                if (request.isForMainFrame()) onLoadFailed();
+            }
+
+            @SuppressWarnings("deprecation")
+            @Override
+            public void onReceivedError(WebView view, int errorCode, String description, String failingUrl) {
+                // Called instead of the method above before Android 6, for main frames only.
+                onLoadFailed();
             }
 
             @Override
@@ -287,6 +321,27 @@ public class MainActivity extends Activity {
             });
         }
         return false;
+    }
+
+    // Until a page draws, the WebView is just black, so without this a failed or
+    // stalled load looks like a broken app. The message covers WebView's own error
+    // page and offers a reload; it goes away once a page finishes loading.
+    private void onLoadFailed() {
+        loadFailed = true;
+        webView.removeCallbacks(slowLoad);
+        showLoadProblem(R.string.load_failed);
+    }
+
+    private void showLoadProblem(int message) {
+        loadProblemText.setText(message);
+        loadProblem.setVisibility(View.VISIBLE);
+        findViewById(R.id.reload).requestFocus();
+    }
+
+    private void reload() {
+        loadProblem.setVisibility(View.GONE);
+        String url = webView.getUrl();
+        webView.loadUrl(url != null ? url : HOME_URL);
     }
 
     // Immersive mode: hides the status bar, navigation bar and tablet taskbar; an edge

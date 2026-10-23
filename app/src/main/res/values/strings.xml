@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">PiConnect</string>
+    <string name="reload">Reload</string>
+    <string name="load_failed">Can\'t reach Raspberry Pi Connect.\nCheck your internet connection.</string>
+    <string name="load_slow">Raspberry Pi Connect is taking a long time to load.</string>
 </resources>

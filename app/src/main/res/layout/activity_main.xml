@@ -9,4 +9,34 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent" />
 
+    <!-- Shown over the page when it fails or takes too long to load. -->
+    <LinearLayout
+        android:id="@+id/load_problem"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@color/ic_launcher_background"
+        android:clickable="true"
+        android:gravity="center"
+        android:orientation="vertical"
+        android:padding="32dp"
+        android:theme="@android:style/Theme.Material"
+        android:visibility="gone">
+
+        <TextView
+            android:id="@+id/load_problem_text"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp" />
+
+        <Button
+            android:id="@+id/reload"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/reload" />
+
+    </LinearLayout>
+
 </FrameLayout>
