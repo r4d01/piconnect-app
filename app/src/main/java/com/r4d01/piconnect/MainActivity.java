@@ -320,31 +320,17 @@ public class MainActivity extends Activity {
         }
     }
 
-    // Keeps the whole window (the WebView and Chromium's fullscreen view alike) away
-    // from the input method while a physical keyboard is attached. Any IME connection,
-    // even Gboard with nothing on screen, flashes the tablet taskbar on every
-    // keystroke. Hardware keys still reach the page directly, translated with
-    // Android's active physical keyboard layout.
+    // Keeps the whole window away from the input method while a physical keyboard is
+    // attached. Any IME connection (Gboard even with nothing on screen) flashes the
+    // tablet taskbar on every keystroke. KeyboardWebView covers the WebView, but in
+    // fullscreen Chromium's own view has focus, so this blocks it window-wide.
+    // Hardware keys still reach the page directly.
     private void updateImeBlock() {
-        if (hasPhysicalKeyboard()) {
+        if (KeyboardWebView.hasPhysicalKeyboard()) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
         } else {
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
         }
-    }
-
-    // Detachable tablet keyboards often don't set Configuration.keyboard /
-    // hardKeyboardHidden, so look at the connected input devices instead.
-    private static boolean hasPhysicalKeyboard() {
-        for (int id : InputDevice.getDeviceIds()) {
-            InputDevice device = InputDevice.getDevice(id);
-            if (device != null && !device.isVirtual()
-                    && device.getKeyboardType() == InputDevice.KEYBOARD_TYPE_ALPHABETIC
-                    && (device.getSources() & InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD) {
-                return true;
-            }
-        }
-        return false;
     }
 
     @Override
