@@ -5,6 +5,7 @@ import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.graphics.Bitmap;
+import android.graphics.Insets;
 import android.hardware.input.InputManager;
 import android.net.Uri;
 import android.os.Build;
@@ -161,6 +162,7 @@ public class MainActivity extends Activity {
     private final Runnable slowLoad = () -> showLoadProblem(R.string.load_slow);
     private InputManager inputManager;
     private Boolean imeBlocked;
+    private int imeHeight;
     private final InputManager.InputDeviceListener keyboardListener =
             new InputManager.InputDeviceListener() {
                 @Override
@@ -294,12 +296,25 @@ public class MainActivity extends Activity {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             container.setOnApplyWindowInsetsListener((v, insets) -> {
+                boolean imeVisible = insets.isVisible(WindowInsets.Type.ime());
                 // Swipe-revealed transient bars don't count as visible here, so this
-                // only fires when something has brought the bars back for good.
-                if (insets.isVisible(WindowInsets.Type.navigationBars())) {
+                // only fires when something has brought the bars back for good. An
+                // on-screen keyboard brings the navigation bar with it; leave that be.
+                if (insets.isVisible(WindowInsets.Type.navigationBars()) && !imeVisible) {
                     v.post(this::hideSystemBars);
                 }
-                return insets;
+                // The page is shrunk above the on-screen keyboard here, not by the
+                // WebView: it measures the keyboard against its own unscaled size
+                // (see applyScale) and would leave a gap above it. So the WebView
+                // doesn't get the keyboard's inset.
+                int height = imeVisible ? insets.getInsets(WindowInsets.Type.ime()).bottom : 0;
+                if (height != imeHeight) {
+                    imeHeight = height;
+                    v.post(this::applyScales);
+                }
+                return new WindowInsets.Builder(insets)
+                        .setInsets(WindowInsets.Type.ime(), Insets.NONE)
+                        .build();
             });
         }
 
@@ -493,10 +508,11 @@ public class MainActivity extends Activity {
     // Lays the view out at (dpr / scale) times the screen size, then shrinks it back
     // with a view transform. The page sees a CSS viewport of physicalWidth / scale,
     // so Pi Connect negotiates a matching resolution and text is `scale`x larger.
+    // The height leaves room for the on-screen keyboard, if shown.
     private void applyScale(View v) {
         int cw = container.getWidth();
-        int ch = container.getHeight();
-        if (cw == 0 || ch == 0) return;
+        int ch = container.getHeight() - imeHeight;
+        if (cw <= 0 || ch <= 0) return;
 
         float k = getResources().getDisplayMetrics().density / scale;
         int w = Math.round(cw * k);
