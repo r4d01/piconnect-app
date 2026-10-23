@@ -59,7 +59,7 @@ Requires Android 5.0 or newer. Hiding the system bars and the on-screen keyboard
 
 - **A tablet with a BT keyboard and mouse.** A phone works too, and so does touch, but a remote desktop is much nicer with real input devices.
 - **Turn off the on-screen keyboard for physical keyboards** in Android's settings, usually under **Settings → System → Keyboard → Physical keyboard → Use on-screen keyboard**. The app hides it anyway, but with this off, the taskbar doesn't even flash when you click into a text field.
-- **Check Android's physical keyboard layout** under **Settings → System → Keyboard → Physical keyboard**. With a keyboard attached, the app types characters using that layout. If you have more than one (say US and Czech), switch between them with **Ctrl+Space**. Wrong quotes or symbols usually mean the wrong layout is active.
+- **Check Android's physical keyboard layout** under **Settings → System → Keyboard → Physical keyboard**. With a keyboard attached, the app types characters using that layout. If you have more than one (say US and Czech), switch between them with **Ctrl+Space**. Wrong quotes or symbols usually mean the wrong layout is active. Pick plain **English (US)**, not *US International*: there `'` and `"` wait for the next key to make accented letters, and in this app they don't combine.
 - **Nothing extra on the Pi.** Raspberry Pi OS already switches windows with Alt+Tab.
 
 ### 🔄 Upgrading
