@@ -37,7 +37,7 @@ I also use it to manage my home lab: a headless Raspberry Pi 4 cluster, which I 
 
 | Key | What it does |
 |---|---|
-| **Volume up / down** | Makes everything larger or smaller: 0.5× to 3×. The default is 1× on tablets (8" and up) and 1.25× on phones. They don't change the volume in this app. |
+| **Volume up / down** | Makes everything larger or smaller: 0.5× to 3×. The default is 1× on tablets (8" and up) and 1.75× on phones. They don't change the volume in this app. |
 | **Right Ctrl** or **Menu** | Acts as **Alt** on the Pi: + Tab switches windows, + Shift + Tab goes back, + F4 closes a window. |
 | **Back** | Leaves fullscreen, then goes back a page. |
 | **Swipe from a screen edge** | Shows Android's system bars briefly. |

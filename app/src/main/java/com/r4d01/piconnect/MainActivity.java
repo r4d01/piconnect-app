@@ -48,7 +48,7 @@ public class MainActivity extends Activity {
     // 1x text is too small.
     private static final double TABLET_MIN_INCHES = 8;
     private static final float TABLET_SCALE = 1.0f;
-    private static final float PHONE_SCALE = 1.25f;
+    private static final float PHONE_SCALE = 1.75f;
     private static final float MIN_SCALE = 0.5f;
     private static final float MAX_SCALE = 3.0f;
     private static final float SCALE_STEP = 0.25f;
@@ -68,8 +68,9 @@ public class MainActivity extends Activity {
     //   (e.g. the session was still connecting). Once fullscreen has started, it
     //   stays out of the way if the user leaves; it re-arms when the control
     //   disappears (e.g. after disconnecting);
-    // - keeps the page scrolled to the origin, because Pi Connect focuses a hidden
-    //   input for keyboard capture and the WebView scrolls it into view.
+    // On session pages (marked by URL with the piapp-session class) it also keeps the
+    // page scrolled to the origin: CSS blocks scrolling by the user, but Pi Connect
+    // focuses a hidden input for keyboard capture and the WebView scrolls it into view.
     // Controls are found by visible label, aria-label or title, not by tag.
     private static final String PAGE_JS =
             "(function() {" +
@@ -118,7 +119,8 @@ public class MainActivity extends Activity {
             "       attributes: true, attributeFilter: ['disabled', 'aria-disabled', 'hidden']});" +
             "  schedule();" +
             "  window.addEventListener('scroll', function() {" +
-            "    if ((window.scrollX || window.scrollY) && controls(/full ?screen/i).length) window.scrollTo(0, 0);" +
+            "    if ((window.scrollX || window.scrollY) && document.documentElement.classList.contains('piapp-session'))" +
+            "      window.scrollTo(0, 0);" +
             "  });" +
             // Pi Connect uses Turbo, whose in-page navigations never reach
             // shouldOverrideUrlLoading, so they're checked here too.
@@ -128,14 +130,19 @@ public class MainActivity extends Activity {
             // On the device list, show only its <main> section: hide every element
             // that is neither inside <main> nor one of its ancestors. Device names
             // link to detail pages the app doesn't show, so they aren't links here.
-            // The class is refreshed after Turbo visits; the <style> survives them.
+            // Session pages are a fixed screen: they never scroll, by gesture or
+            // overscroll. The classes are refreshed after Turbo visits; the <style>
+            // survives them.
             "  var style = document.createElement('style');" +
             "  style.textContent =" +
             "      'html.piapp-devices body *:not(:has(main)):not(main):not(main *) { display: none !important; }' +" +
-            "      'html.piapp-devices main a.link[href^=\"/devices/\"] { pointer-events: none; text-decoration: none; }';" +
+            "      'html.piapp-devices main a.link[href^=\"/devices/\"] { pointer-events: none; text-decoration: none; }' +" +
+            "      'html.piapp-session, html.piapp-session body { overflow: hidden !important; overscroll-behavior: none !important; }';" +
             "  document.head.appendChild(style);" +
             "  function markPage() {" +
-            "    document.documentElement.classList.toggle('piapp-devices', /^\\/devices\\/?$/.test(location.pathname));" +
+            "    var c = document.documentElement.classList;" +
+            "    c.toggle('piapp-devices', /^\\/devices\\/?$/.test(location.pathname));" +
+            "    c.toggle('piapp-session', /^\\/devices\\/[^\\/]+\\/(screen-sharing|remote-shell)-session\\/?$/.test(location.pathname));" +
             "  }" +
             "  markPage();" +
             "  document.addEventListener('turbo:load', markPage);" +
@@ -197,6 +204,7 @@ public class MainActivity extends Activity {
         webView.getSettings().setLoadWithOverviewMode(false);
         webView.setVerticalScrollBarEnabled(false);
         webView.setHorizontalScrollBarEnabled(false);
+        webView.setOverScrollMode(View.OVER_SCROLL_NEVER);
 
         loadProblem = findViewById(R.id.load_problem);
         loadProblemText = findViewById(R.id.load_problem_text);
