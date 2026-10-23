@@ -20,10 +20,6 @@ The catch was screen sharing in a mobile browser. The remote desktop never displ
 
 I didn't want to use the browser for this at all. I prefer to have the connection to my Pi in its own app, not in one of my many browser tabs. I wanted an app that opens everything in fullscreen in two clicks — open the app, then **Connect via → Screen sharing** — and works right away, without any zooming.
 
-I don't need super performance. I live mainly in the terminal and the browser, and a Raspberry Pi 5 with a fast NVMe drive handles that just fine.
-
-I also use it to manage my home lab: a headless Raspberry Pi 4 cluster, which I reach through the remote shell.
-
 ## ✨ What it does
 
 - 🖥️ **A sharp desktop that fills the screen.** The app gives Raspberry Pi Connect your screen's real resolution, so the desktop isn't tiny and blurry. Screen sharing opens straight into fullscreen.
