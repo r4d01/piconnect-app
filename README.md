@@ -14,7 +14,7 @@ I made this app for my own needs. It isn't perfect, but it does everything I nee
 
 ## 💭 Why I built it
 
-I wanted a super portable PC, and my Raspberry Pi 5 was collecting dust. So I got a mini BT keyboard and mouse, and turned my Android tablet (and phone) into that PC: the tablet is the screen, the Pi does the computing.
+I wanted a super portable PC for emergencies, one I could pull out whenever I need it. My Raspberry Pi 5 with a fast NVMe drive can do that job, and it was collecting dust anyway. So I got a mini BT keyboard and mouse, and turned my Android tablet (and phone) into that PC: the tablet is the screen, the Pi at home does the computing. Thanks to Raspberry Pi Connect, there's no VPN or port forwarding to set up. It's super easy.
 
 The catch was screen sharing in a mobile browser. The remote desktop never displayed properly: on my phone the resolution made it unusable, and on the tablet I had to zoom in and out to fix it every time I connected. That got annoying fast.
 
@@ -42,7 +42,7 @@ Every other key, including Left Ctrl, goes to the Pi as usual.
 
 ## 🚀 Getting started
 
-No SSH, VPN, port forwarding or direct connection to your Pi needed. All you need is a Raspberry Pi with Raspberry Pi Connect, and voilà.
+You don't need SSH, a VPN, port forwarding or a direct connection to your Pi. A Raspberry Pi with Raspberry Pi Connect set up is all it takes.
 
 1. **Set up Raspberry Pi Connect on your Pi.** It's super easy with [Raspberry Pi Imager](https://www.raspberrypi.com/software/): turn on Raspberry Pi Connect in the OS customisation settings when you write the SD card, and the Pi shows up in your device list after its first boot. For other ways, see [the documentation](https://www.raspberrypi.com/documentation/services/connect.html).
 2. **Download the APK** from the [Releases](https://github.com/r4d01/piconnect-app/releases) page.
