@@ -15,7 +15,7 @@ import android.webkit.WebView;
 // has a text field focused. Without an InputConnection Chromium still turns hardware
 // key events into normal typing.
 // This only covers the WebView itself: in fullscreen Chromium's own view takes focus,
-// so MainActivity also hides the IME window whenever it appears.
+// so MainActivity also blocks the IME for the whole window.
 public class KeyboardWebView extends WebView {
 
     public KeyboardWebView(Context context, AttributeSet attrs) {

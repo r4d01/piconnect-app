@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.hardware.input.InputManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -138,6 +139,24 @@ public class MainActivity extends Activity {
     private SharedPreferences prefs;
     private float scale;
     private boolean standInDown;
+    private InputManager inputManager;
+    private final InputManager.InputDeviceListener keyboardListener =
+            new InputManager.InputDeviceListener() {
+                @Override
+                public void onInputDeviceAdded(int deviceId) {
+                    updateImeBlock();
+                }
+
+                @Override
+                public void onInputDeviceRemoved(int deviceId) {
+                    updateImeBlock();
+                }
+
+                @Override
+                public void onInputDeviceChanged(int deviceId) {
+                    updateImeBlock();
+                }
+            };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -220,14 +239,12 @@ public class MainActivity extends Activity {
             }
         }, "PiConnectApp");
 
+        inputManager = (InputManager) getSystemService(INPUT_SERVICE);
+        inputManager.registerInputDeviceListener(keyboardListener, null);
+        updateImeBlock();
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             container.setOnApplyWindowInsetsListener((v, insets) -> {
-                // A shown IME (even just its physical-keyboard toolbar) brings the
-                // tablet taskbar back. With a real keyboard attached it isn't needed.
-                if (insets.isVisible(WindowInsets.Type.ime()) && KeyboardWebView.hasPhysicalKeyboard()) {
-                    WindowInsetsController controller = getWindow().getInsetsController();
-                    if (controller != null) controller.hide(WindowInsets.Type.ime());
-                }
                 // Swipe-revealed transient bars don't count as visible here, so this
                 // only fires when something has brought the bars back for good.
                 if (insets.isVisible(WindowInsets.Type.navigationBars())) {
@@ -301,6 +318,25 @@ public class MainActivity extends Activity {
                             | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                             | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
         }
+    }
+
+    // Keeps the whole window away from the input method while a physical keyboard is
+    // attached. Any IME connection (Gboard even with nothing on screen) flashes the
+    // tablet taskbar on every keystroke. KeyboardWebView covers the WebView, but in
+    // fullscreen Chromium's own view has focus, so this blocks it window-wide.
+    // Hardware keys still reach the page directly.
+    private void updateImeBlock() {
+        if (KeyboardWebView.hasPhysicalKeyboard()) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
+        } else {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        inputManager.unregisterInputDeviceListener(keyboardListener);
+        super.onDestroy();
     }
 
     // Sends a touch tap at a point given in CSS px. Chromium treats it as real input,
