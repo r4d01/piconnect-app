@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.SystemClock;
+import android.util.DisplayMetrics;
 import android.view.Gravity;
 import android.view.InputDevice;
 import android.view.KeyCharacterMap;
@@ -43,7 +44,11 @@ public class MainActivity extends Activity {
             "/|/devices/?|/sign-in.*|/auth/.*|/devices/[^/]+/(screen-sharing|remote-shell)-session/?");
     private static final String PREFS = "piconnect";
     private static final String PREF_SCALE = "scale";
-    private static final float DEFAULT_SCALE = 1.25f;
+    // Default scale: 1x on tablets (screens of 8" and up), larger on phones, where
+    // 1x text is too small.
+    private static final double TABLET_MIN_INCHES = 8;
+    private static final float TABLET_SCALE = 1.0f;
+    private static final float PHONE_SCALE = 1.25f;
     private static final float MIN_SCALE = 0.5f;
     private static final float MAX_SCALE = 3.0f;
     private static final float SCALE_STEP = 0.25f;
@@ -148,6 +153,7 @@ public class MainActivity extends Activity {
     private boolean loadFailed;
     private final Runnable slowLoad = () -> showLoadProblem(R.string.load_slow);
     private InputManager inputManager;
+    private Boolean imeBlocked;
     private final InputManager.InputDeviceListener keyboardListener =
             new InputManager.InputDeviceListener() {
                 @Override
@@ -170,10 +176,11 @@ public class MainActivity extends Activity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        setUpWindow();
         hideSystemBars();
 
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
-        scale = prefs.getFloat(PREF_SCALE, DEFAULT_SCALE);
+        scale = prefs.getFloat(PREF_SCALE, defaultScale());
         // The volume keys don't change the volume in this app, so say what they do.
         Toast.makeText(this, String.format(Locale.US,
                 "Volume buttons change the scale (now %.2fx), not the volume", scale),
@@ -344,11 +351,18 @@ public class MainActivity extends Activity {
         webView.loadUrl(url != null ? url : HOME_URL);
     }
 
-    // Immersive mode: hides the status bar, navigation bar and tablet taskbar; an edge
-    // swipe shows them briefly. Content is laid out as if the bars weren't there, so
-    // showing them doesn't resize the WebView and make Pi Connect renegotiate.
     @SuppressWarnings("deprecation")
-    private void hideSystemBars() {
+    private float defaultScale() {
+        DisplayMetrics m = new DisplayMetrics();
+        getWindowManager().getDefaultDisplay().getRealMetrics(m);
+        double inches = Math.hypot(m.widthPixels / m.xdpi, m.heightPixels / m.ydpi);
+        return inches >= TABLET_MIN_INCHES ? TABLET_SCALE : PHONE_SCALE;
+    }
+
+    // Content is laid out as if the system bars weren't there (including under a
+    // display cutout), so showing them doesn't resize the WebView and make Pi Connect
+    // renegotiate.
+    private void setUpWindow() {
         Window window = getWindow();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
             WindowManager.LayoutParams attrs = window.getAttributes();
@@ -360,10 +374,20 @@ public class MainActivity extends Activity {
             window.setDecorFitsSystemWindows(false);
             WindowInsetsController controller = window.getInsetsController();
             if (controller != null) {
-                controller.hide(WindowInsets.Type.systemBars());
                 controller.setSystemBarsBehavior(
                         WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
             }
+        }
+    }
+
+    // Immersive mode: hides the status bar, navigation bar and tablet taskbar; an edge
+    // swipe shows them briefly.
+    @SuppressWarnings("deprecation")
+    private void hideSystemBars() {
+        Window window = getWindow();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            WindowInsetsController controller = window.getInsetsController();
+            if (controller != null) controller.hide(WindowInsets.Type.systemBars());
         } else {
             window.getDecorView().setSystemUiVisibility(
                     View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
@@ -375,17 +399,35 @@ public class MainActivity extends Activity {
         }
     }
 
-    // Keeps the whole window away from the input method while a physical keyboard is
-    // attached. Any IME connection (Gboard even with nothing on screen) flashes the
-    // tablet taskbar on every keystroke. KeyboardWebView covers the WebView, but in
-    // fullscreen Chromium's own view has focus, so this blocks it window-wide.
-    // Hardware keys still reach the page directly.
+    // Keeps the whole window (the WebView and Chromium's fullscreen view alike) away
+    // from the input method while a physical keyboard is attached. Any IME connection,
+    // even Gboard with nothing on screen, brings the tablet taskbar back, flashing it
+    // on every keystroke. Hardware keys still reach the page directly, translated with
+    // Android's active physical keyboard layout. Only touches the window when the
+    // answer changes: input devices (e.g. BT battery levels) report changes often.
     private void updateImeBlock() {
-        if (KeyboardWebView.hasPhysicalKeyboard()) {
+        boolean block = hasPhysicalKeyboard();
+        if (imeBlocked != null && imeBlocked == block) return;
+        imeBlocked = block;
+        if (block) {
             getWindow().addFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
         } else {
             getWindow().clearFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
         }
+    }
+
+    // Detachable tablet keyboards often don't set Configuration.keyboard /
+    // hardKeyboardHidden, so look at the connected input devices instead.
+    private static boolean hasPhysicalKeyboard() {
+        for (int id : InputDevice.getDeviceIds()) {
+            InputDevice device = InputDevice.getDevice(id);
+            if (device != null && !device.isVirtual()
+                    && device.getKeyboardType() == InputDevice.KEYBOARD_TYPE_ALPHABETIC
+                    && (device.getSources() & InputDevice.SOURCE_KEYBOARD) == InputDevice.SOURCE_KEYBOARD) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override
@@ -509,12 +551,30 @@ public class MainActivity extends Activity {
                 KeyCharacterMap.VIRTUAL_KEYBOARD, REMOTE_MOD_SCANCODE, 0, InputDevice.SOURCE_KEYBOARD));
     }
 
-    // Android intercepts Alt+Tab, so Menu / Right Ctrl stands in for Alt: the page
-    // receives genuine Alt key events and Alt-modified combos, and holding the
-    // stand-in while pressing Tab repeatedly cycles windows on the Pi.
+    // All of the app's own keys are handled here, before the focused view (the
+    // WebView, or Chromium's fullscreen view) can consume them:
+    // - volume keys change the scale;
+    // - Back leaves fullscreen, then goes back a page;
+    // - Android intercepts Alt+Tab, so Menu / Right Ctrl stands in for Alt: the page
+    //   receives genuine Alt key events and Alt-modified combos, and holding the
+    //   stand-in while pressing Tab repeatedly cycles windows on the Pi.
     @Override
     public boolean dispatchKeyEvent(KeyEvent e) {
         int code = e.getKeyCode();
+        boolean down = e.getAction() == KeyEvent.ACTION_DOWN;
+
+        if (code == KeyEvent.KEYCODE_VOLUME_UP || code == KeyEvent.KEYCODE_VOLUME_DOWN) {
+            if (down) changeScale(code == KeyEvent.KEYCODE_VOLUME_UP ? SCALE_STEP : -SCALE_STEP);
+            return true;
+        }
+
+        if (code == KeyEvent.KEYCODE_BACK && (fullscreenView != null || webView.canGoBack())) {
+            if (e.getAction() == KeyEvent.ACTION_UP) {
+                if (fullscreenView != null) exitFullscreen();
+                else webView.goBack();
+            }
+            return true;
+        }
 
         if (isStandIn(code)) {
             if (e.getAction() == KeyEvent.ACTION_DOWN && e.getRepeatCount() == 0 && !standInDown) {
@@ -526,8 +586,7 @@ public class MainActivity extends Activity {
             return true;
         }
 
-        if (standInDown && code != KeyEvent.KEYCODE_VOLUME_UP
-                && code != KeyEvent.KEYCODE_VOLUME_DOWN && code != KeyEvent.KEYCODE_BACK) {
+        if (standInDown && code != KeyEvent.KEYCODE_BACK) {
             sendKey(withRemoteMod(e, e.getAction(), code, e.getScanCode(), e.getRepeatCount()));
             return true;
         }
@@ -545,26 +604,5 @@ public class MainActivity extends Activity {
             // The stand-in's key-up never arrives if focus moves away while it's held.
             releaseStandIn();
         }
-    }
-
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event) {
-        if (keyCode == KeyEvent.KEYCODE_BACK) {
-            if (fullscreenView != null) {
-                exitFullscreen();
-                return true;
-            }
-            if (webView.canGoBack()) {
-                webView.goBack();
-                return true;
-            }
-        } else if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-            changeScale(SCALE_STEP);
-            return true;
-        } else if (keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) {
-            changeScale(-SCALE_STEP);
-            return true;
-        }
-        return super.onKeyDown(keyCode, event);
     }
 }

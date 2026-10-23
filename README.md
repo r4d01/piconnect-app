@@ -18,7 +18,7 @@ I wanted a super portable PC, and my Raspberry Pi 5 was collecting dust. So I go
 
 The catch was screen sharing in a mobile browser. The remote desktop never displayed properly: on my phone the resolution made it unusable, and on the tablet I had to zoom in and out to fix it every time I connected. That got annoying fast.
 
-I didn't want to use the browser for this at all. I wanted a separate app that opens everything in fullscreen in two clicks — open the app, then **Connect via → Screen sharing** — and works right away, without any zooming.
+I didn't want to use the browser for this at all. I prefer to have the connection to my Pi in its own app, not in one of my many browser tabs. I wanted an app that opens everything in fullscreen in two clicks — open the app, then **Connect via → Screen sharing** — and works right away, without any zooming.
 
 I don't need super performance. I live mainly in the terminal and the browser, and a Raspberry Pi 5 with a fast NVMe drive handles that just fine.
 
@@ -37,7 +37,7 @@ I also use it to manage my home lab: a headless Raspberry Pi 4 cluster, which I 
 
 | Key | What it does |
 |---|---|
-| **Volume up / down** | Makes everything larger or smaller: 0.5× to 3×, default 1.25×. They don't change the volume in this app. |
+| **Volume up / down** | Makes everything larger or smaller: 0.5× to 3×. The default is 1× on tablets (8" and up) and 1.25× on phones. They don't change the volume in this app. |
 | **Right Ctrl** or **Menu** | Acts as **Alt** on the Pi: + Tab switches windows, + Shift + Tab goes back, + F4 closes a window. |
 | **Back** | Leaves fullscreen, then goes back a page. |
 | **Swipe from a screen edge** | Shows Android's system bars briefly. |
