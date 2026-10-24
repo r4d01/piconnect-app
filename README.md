@@ -2,7 +2,7 @@
 
 # <img src="https://cdn.simpleicons.org/raspberrypi" height="28" alt="Raspberry Pi"> Pi Connect App
 
-**Your Raspberry Pi lab, from anywhere.**
+**Your Raspberry Pi, from anywhere.**
 
 Pair an Android device with a keyboard and mouse, open this app, and you're at your Raspberry Pi's desktop — wherever your feet take you, as long as there's an internet connection. It's close to carrying your PC around with you, without carrying your PC around.
 
@@ -85,4 +85,4 @@ GitHub Actions builds the APK ([`.github/workflows/build.yml`](.github/workflows
 - Every push to `main` builds a debug APK and attaches it to the workflow run as the `piconnect-debug` artifact.
 - Pushing a tag like `v1.0` also publishes the APK on the Releases page.
 
-To build locally, you need JDK 17, the Android SDK and Gradle 8.6 on an x86_64 machine. Run `gradle assembleDebug`, and the APK ends up in `app/build/outputs/apk/debug/`. The Android build tools don't run on a Raspberry Pi, which is why the project relies on CI.
+To build locally, you need JDK 17, the Android SDK and Gradle 8.6 on an x86_64 machine. Run `gradle assembleDebug`, and the APK ends up in `app/build/outputs/apk/debug/`.
