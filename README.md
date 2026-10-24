@@ -2,7 +2,7 @@
 
 # <img src="https://cdn.simpleicons.org/raspberrypi" height="28" alt="Raspberry Pi"> Pi Connect App
 
-**Your Raspberry Pi, from anywhere.**
+**Connect to your Raspberry Pi, from anywhere.**
 
 Pair an Android device with a keyboard and mouse, open this app, and you're at your Raspberry Pi's desktop — wherever your feet take you, as long as there's an internet connection. It's close to carrying your PC around with you, without carrying your PC around.
 
