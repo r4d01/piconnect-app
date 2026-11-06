@@ -23,7 +23,7 @@ I didn't want to use the browser for this at all. I prefer to have the connectio
 ## ✨ What it does
 
 - 🖥️ **A sharp desktop that fills the screen.** The app gives Raspberry Pi Connect your screen's real resolution, so the desktop isn't tiny and blurry. Screen sharing opens straight into fullscreen.
-- 🧹 **Nothing but your desktop.** No address bar or tabs, and Android's status bar, navigation bar and taskbar are hidden. Swipe in from a screen edge when you need them.
+- 🧹 **Nothing but your desktop.** No address bar or tabs. Android's status bar and navigation bar stay visible, so the time, battery and navigation are always at hand.
 - 🎯 **Only what you need.** After you sign in, you see just your device list and your sessions. Menus and account pages are hidden, and links to other sites open in your regular browser.
 - ⌨️ **Made for a physical keyboard.** Android grabs Alt+Tab before any app can see it, so the real Alt key can't switch windows on the Pi. The workaround: **Right Ctrl acts as Alt**, so Right Ctrl + Tab switches windows. Weird, but hell, it works. The on-screen keyboard also stays out of the way.
 - 🔍 **Adjustable size.** Make everything larger or smaller with the volume keys. Your choice is remembered.
@@ -36,7 +36,6 @@ I didn't want to use the browser for this at all. I prefer to have the connectio
 | **Volume up / down** | Makes everything larger or smaller: 0.5× to 3×. The default is 1× on tablets (8" and up) and 1.75× on phones. They don't change the volume in this app. |
 | **Right Ctrl** or **Menu** | Acts as **Alt** on the Pi: + Tab switches windows, + Shift + Tab goes back, + F4 closes a window. |
 | **Back** | Leaves fullscreen, then goes back a page. |
-| **Swipe from a screen edge** | Shows Android's system bars briefly. |
 
 Every other key, including Left Ctrl, goes to the Pi as usual.
 
@@ -49,12 +48,12 @@ You don't need SSH, a VPN, port forwarding or a direct connection to your Pi. A 
 3. **Install it on your Android device.** You'll need to allow installing apps from unknown sources for your browser or file manager.
 4. **Open PiConnect**, sign in with your Raspberry Pi ID, and choose **Connect via** next to one of your devices.
 
-Requires Android 5.0 or newer. Hiding the system bars and the on-screen keyboard works best on Android 11 or newer.
+Requires Android 5.0 or newer. Hiding the on-screen keyboard works best on Android 11 or newer.
 
 ### 💡 Recommended setup
 
 - **A tablet with a BT keyboard and mouse.** A phone works too, and so does touch, but a remote desktop is much nicer with real input devices.
-- **Turn off the on-screen keyboard for physical keyboards** in Android's settings, usually under **Settings → System → Keyboard → Physical keyboard → Use on-screen keyboard**. The app hides it anyway, but with this off, the taskbar doesn't even flash when you click into a text field.
+- **Turn off the on-screen keyboard for physical keyboards** in Android's settings, usually under **Settings → System → Keyboard → Physical keyboard → Use on-screen keyboard**. The app hides it anyway, but with this off, it doesn't even flash when you click into a text field.
 - **Check Android's physical keyboard layout** under **Settings → System → Keyboard → Physical keyboard**. With a keyboard attached, the app types characters using that layout. If you have more than one (say US and Czech), switch between them with **Ctrl+Space**. Wrong quotes or symbols usually mean the wrong layout is active. Pick plain **English (US)**, not *US International*: there `'` and `"` wait for the next key to make accented letters, and in this app they don't combine.
 - **Nothing extra on the Pi.** Raspberry Pi OS already switches windows with Alt+Tab.
 

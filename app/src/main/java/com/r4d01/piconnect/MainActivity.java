@@ -21,7 +21,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
 import android.view.WindowInsets;
-import android.view.WindowInsetsController;
 import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebChromeClient;
@@ -186,7 +185,6 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         setUpWindow();
-        hideSystemBars();
 
         prefs = getSharedPreferences(PREFS, MODE_PRIVATE);
         scale = prefs.getFloat(PREF_SCALE, defaultScale());
@@ -296,24 +294,29 @@ public class MainActivity extends Activity {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             container.setOnApplyWindowInsetsListener((v, insets) -> {
-                boolean imeVisible = insets.isVisible(WindowInsets.Type.ime());
-                // Swipe-revealed transient bars don't count as visible here, so this
-                // only fires when something has brought the bars back for good. An
-                // on-screen keyboard brings the navigation bar with it; leave that be.
-                if (insets.isVisible(WindowInsets.Type.navigationBars()) && !imeVisible) {
-                    v.post(this::hideSystemBars);
-                }
+                // The page sits between the system bars (and clear of a display
+                // cutout): the container's padding keeps its children there.
+                Insets bars = insets.getInsets(
+                        WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                boolean changed = bars.left != v.getPaddingLeft() || bars.top != v.getPaddingTop()
+                        || bars.right != v.getPaddingRight() || bars.bottom != v.getPaddingBottom();
+                if (changed) v.setPadding(bars.left, bars.top, bars.right, bars.bottom);
                 // The page is shrunk above the on-screen keyboard here, not by the
                 // WebView: it measures the keyboard against its own unscaled size
                 // (see applyScale) and would leave a gap above it. So the WebView
-                // doesn't get the keyboard's inset.
-                int height = imeVisible ? insets.getInsets(WindowInsets.Type.ime()).bottom : 0;
+                // doesn't get the keyboard's inset. The keyboard's inset includes the
+                // navigation bar, which the padding already leaves room for.
+                int height = insets.isVisible(WindowInsets.Type.ime())
+                        ? Math.max(0, insets.getInsets(WindowInsets.Type.ime()).bottom - bars.bottom) : 0;
                 if (height != imeHeight) {
                     imeHeight = height;
-                    v.post(this::applyScales);
+                    changed = true;
                 }
+                if (changed) v.post(this::applyScales);
                 return new WindowInsets.Builder(insets)
                         .setInsets(WindowInsets.Type.ime(), Insets.NONE)
+                        .setInsets(WindowInsets.Type.systemBars(), Insets.NONE)
+                        .setInsets(WindowInsets.Type.displayCutout(), Insets.NONE)
                         .build();
             });
         }
@@ -382,9 +385,10 @@ public class MainActivity extends Activity {
         return inches >= TABLET_MIN_INCHES ? TABLET_SCALE : PHONE_SCALE;
     }
 
-    // Content is laid out as if the system bars weren't there (including under a
-    // display cutout), so showing them doesn't resize the WebView and make Pi Connect
-    // renegotiate.
+    // The status and navigation bars (and tablet taskbar) stay visible. On Android 11+
+    // the window is laid out edge-to-edge and the container's insets listener keeps
+    // the page between the bars itself, since it also has to handle the on-screen
+    // keyboard; earlier versions fit the window between the bars on their own.
     private void setUpWindow() {
         Window window = getWindow();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -395,37 +399,13 @@ public class MainActivity extends Activity {
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             window.setDecorFitsSystemWindows(false);
-            WindowInsetsController controller = window.getInsetsController();
-            if (controller != null) {
-                controller.setSystemBarsBehavior(
-                        WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
-            }
-        }
-    }
-
-    // Immersive mode: hides the status bar, navigation bar and tablet taskbar; an edge
-    // swipe shows them briefly.
-    @SuppressWarnings("deprecation")
-    private void hideSystemBars() {
-        Window window = getWindow();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            WindowInsetsController controller = window.getInsetsController();
-            if (controller != null) controller.hide(WindowInsets.Type.systemBars());
-        } else {
-            window.getDecorView().setSystemUiVisibility(
-                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
-                            | View.SYSTEM_UI_FLAG_FULLSCREEN
-                            | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
-                            | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
-                            | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
-                            | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
         }
     }
 
     // Keeps the whole window (the WebView and Chromium's fullscreen view alike) away
-    // from the input method while a physical keyboard is attached. Any IME connection,
-    // even Gboard with nothing on screen, brings the tablet taskbar back, flashing it
-    // on every keystroke. Hardware keys still reach the page directly, translated with
+    // from the input method while a physical keyboard is attached, so no keyboard
+    // toolbar pops up over the page when a text field (or Pi Connect's hidden
+    // keyboard-capture input) gets focus. Hardware keys still reach the page directly, translated with
     // Android's active physical keyboard layout. Only touches the window when the
     // answer changes: input devices (e.g. BT battery levels) report changes often.
     private void updateImeBlock() {
@@ -505,13 +485,14 @@ public class MainActivity extends Activity {
         }
     }
 
-    // Lays the view out at (dpr / scale) times the screen size, then shrinks it back
-    // with a view transform. The page sees a CSS viewport of physicalWidth / scale,
-    // so Pi Connect negotiates a matching resolution and text is `scale`x larger.
-    // The height leaves room for the on-screen keyboard, if shown.
+    // Lays the view out at (dpr / scale) times the area between the system bars, then
+    // shrinks it back with a view transform. The page sees a CSS viewport of
+    // physicalWidth / scale, so Pi Connect negotiates a matching resolution and text
+    // is `scale`x larger. The height leaves room for the on-screen keyboard, if shown.
     private void applyScale(View v) {
-        int cw = container.getWidth();
-        int ch = container.getHeight() - imeHeight;
+        int cw = container.getWidth() - container.getPaddingLeft() - container.getPaddingRight();
+        int ch = container.getHeight() - container.getPaddingTop() - container.getPaddingBottom()
+                - imeHeight;
         if (cw <= 0 || ch <= 0) return;
 
         float k = getResources().getDisplayMetrics().density / scale;
@@ -621,10 +602,7 @@ public class MainActivity extends Activity {
     @Override
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
-        if (hasFocus) {
-            // Dialogs, the notification shade etc. can bring the bars back.
-            hideSystemBars();
-        } else {
+        if (!hasFocus) {
             // The stand-in's key-up never arrives if focus moves away while it's held.
             releaseStandIn();
         }
