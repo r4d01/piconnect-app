@@ -57,6 +57,19 @@ Requires Android 5.0 or newer. Hiding the on-screen keyboard works best on Andro
 - **Check Android's physical keyboard layout** under **Settings → System → Keyboard → Physical keyboard**. With a keyboard attached, the app types characters using that layout. If you have more than one (say US and Czech), switch between them with **Ctrl+Space**. Wrong quotes or symbols usually mean the wrong layout is active. Pick plain **English (US)**, not *US International*: there `'` and `"` wait for the next key to make accented letters, and in this app they don't combine.
 - **Nothing extra on the Pi.** Raspberry Pi OS already switches windows with Alt+Tab.
 
+### 🧵 Optional: tmux in the remote shell
+
+With [tmux](https://github.com/tmux/tmux/wiki), programs in the remote shell keep running after you disconnect. The `piconnect-tmux` script attaches every Raspberry Pi Connect remote shell to the tmux session `piconn`, and logs out when you leave it. Press any key during the countdown to skip.
+
+After your first connection to your Pi, open a remote shell and run:
+
+```bash
+sudo apt install tmux
+curl -fsSL https://raw.githubusercontent.com/r4d01/piconnect-app/main/extras/piconnect-tmux-install.sh | bash
+```
+
+To update, run the `curl` command again.
+
 ### 🔄 Upgrading
 
 Uninstall the old app, then install the new APK. Android refuses to install a new build over the old one because each build is signed with a different key. Uninstalling clears the app's data, so you'll need to sign in and set your size again.
